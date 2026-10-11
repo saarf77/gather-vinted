@@ -109,6 +109,7 @@ function updateResultControls(){
  $('#results-page-summary').textContent=t(resultPage.hasMore?'results.shown':'results.allShown',resultPage);
  $('#load-more-results').hidden=!resultPage.hasMore;$('#load-more-results').disabled=searching;
  $('#load-more-results').textContent=t('results.loadMore',{count:Math.min(RESULT_BATCH_SIZE,resultPage.total-resultPage.shown)});
+ queueScrollControls();
 }
 
 function checkOptions(target,type,checked=[]){
@@ -222,7 +223,7 @@ for(const dialog of document.querySelectorAll('dialog'))dialog.addEventListener(
 $('#all-filter').addEventListener('click',()=>{filter='all';render();});$('#multi-filter').addEventListener('click',()=>{filter='multi';render();});$('#full-filter').addEventListener('click',()=>{filter='full';render();});$('#sort').addEventListener('change',render);
 $('#results').addEventListener('click',event=>{
  if(event.target.closest('#empty-all')){filter='all';render();}
- const button=event.target.closest('.bundle-toggle');if(button){const detail=button.closest('.seller-card').querySelector('.bundle-detail');detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));button.innerHTML=`${t(detail.hidden?'results.details':'results.hide')} <span aria-hidden="true">${detail.hidden?'⌄':'⌃'}</span>`;}
+ const button=event.target.closest('.bundle-toggle');if(button){const detail=button.closest('.seller-card').querySelector('.bundle-detail');detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));button.innerHTML=`${t(detail.hidden?'results.details':'results.hide')} <span aria-hidden="true">${detail.hidden?'⌄':'⌃'}</span>`;queueScrollControls();}
 });
 $('#load-more-results').addEventListener('click',()=>{
  if(searching||!resultPage.hasMore)return;
@@ -233,13 +234,28 @@ $('#load-more-results').addEventListener('click',()=>{
  if(next){next.tabIndex=-1;next.focus({preventScroll:true});}
 });
 let scrollFrame=false;
-function updateBackToTop(){$('#back-to-top').hidden=window.scrollY<600;}
-window.addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=true;requestAnimationFrame(()=>{updateBackToTop();scrollFrame=false;});},{passive:true});
+function updateScrollControls(){
+ const root=document.documentElement,main=document.querySelector('main'),view=window.visualViewport;
+ const viewportRight=Math.min(root.clientWidth,(view?.offsetLeft??0)+(view?.width??root.clientWidth));
+ const contentRight=main.getBoundingClientRect().right-parseFloat(getComputedStyle(main).paddingRight);
+ root.style.setProperty('--scroll-control-right',`${Math.max(12,root.clientWidth-Math.min(contentRight,viewportRight-12))}px`);
+ $('#back-to-top').hidden=window.scrollY<600;
+ const progress=$('#page-scroll-progress'),range=root.scrollHeight-window.innerHeight;
+ const percent=range>0?Math.max(0,Math.min(100,window.scrollY/range*100)):0;
+ progress.hidden=!resultPage.total||window.scrollY<600;
+ progress.setAttribute('aria-valuenow',String(Math.round(percent)));
+ $('#page-scroll-fill').style.height=`${percent}%`;
+}
+function queueScrollControls(){if(scrollFrame)return;scrollFrame=true;requestAnimationFrame(()=>{updateScrollControls();scrollFrame=false;});}
+window.addEventListener('scroll',queueScrollControls,{passive:true});
+window.addEventListener('resize',queueScrollControls);
+window.visualViewport?.addEventListener('resize',queueScrollControls);
+window.visualViewport?.addEventListener('scroll',queueScrollControls);
 $('#back-to-top').addEventListener('click',()=>{
  window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
  $('.logo').focus({preventScroll:true});
 });
-updateBackToTop();
+updateScrollControls();
 $('#about-button').addEventListener('click',()=>$('#about-dialog').showModal());
 $('#import-button').addEventListener('click',()=>{if(searching)return;$('#import-error').textContent='';$('#import-file').value='';$('#import-dialog').showModal();});
 const example=[{id:'your-listing-id',sellerId:'your-seller-id',sellerName:'seller-name',title:'Wool scarf',size:'One size',price:8,currency:'EUR',brand:'',category:'accessories',condition:'Very good'}];

@@ -83,3 +83,16 @@ A fresh real Quick search returned 197 matching sellers in All matches. The page
 - Sixteen multi-card desktop rows measured 0 px differences in card heights and collapsed footer alignment after appending. Grid layout is based on the full filtered collection so introducing a single-match seller in a later batch cannot resize preceding bundle cards.
 
 Validation: 82 Node tests, JavaScript syntax check, production build and code review. Counts are observations from this search snapshot.
+
+
+## Follow-up: scrolling controls within the page
+
+The previous Back to top button aligned with the viewport edge instead of the content edge (1230 px versus 1200 px at the tested desktop width). Both floating controls now use the main content edge, clamped to the visible viewport. The displayed-seller counter remains separate from a new fixed, slim scroll-progress bar on the right. This bar tracks actual page position and stays visible while browsing down or up through long results.
+
+Browser checks used real results and 48 displayed sellers:
+- Widths 320, 390, 740, 1000, 1050, 1265 and 2000 px: document scrollWidth equalled clientWidth at each width, with both controls inside the content edge. The horizontal overflow reported by the user was not reproduced in the original default test viewport; alignment was independently confirmed incorrect and corrected.
+- Right-side scroll progress updated on down/up scrolling (49%, 100%, 18%), and remained visible at the bottom. Expanding the last seller details updated progress from 100% to 98% immediately, reflecting the added page height.
+- EN/DE controls fit at mobile width. Back to top returned to zero, focused the home link and hid the scroll controls.
+- Review corrected positioning for narrower visual viewports and added immediate progress refresh for expanded details. Pinch zoom was reviewed in code; browser UI did not provide a pinch-zoom test.
+
+Validation: 82 Node tests, build, JavaScript syntax check, diff whitespace check and code review. Proof screenshots are in ignored artifacts/.
