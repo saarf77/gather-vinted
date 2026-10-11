@@ -165,7 +165,8 @@ export const messages = {
     "import.text": "{field} must be text.",
     "import.url": "url must be an HTTPS vinted.de item link.",
     "error.json": "Invalid JSON",
-    "error.body": "Request too large"
+    "error.body": "Request too large",
+    "search.languageNote": "Searching Vinted Germany: common English item names are translated to German (e.g. jacket → Jacke). For other phrases, use German."
   },
   "de": {
     "page.title": "Gather — mehr finden, weniger Pakete",
@@ -332,6 +333,7 @@ export const messages = {
     "import.text": "{field} muss Text sein.",
     "import.url": "Die URL muss ein HTTPS-Artikellink von vinted.de sein.",
     "error.json": "Ungültiges JSON",
-    "error.body": "Die Anfrage ist zu groß"
+    "error.body": "Die Anfrage ist zu groß",
+    "search.languageNote": "Suche auf Vinted Deutschland: Häufige englische Artikelnamen werden ins Deutsche übersetzt (z. B. jacket → Jacke). Nutze für andere Formulierungen Deutsch."
   }
 };

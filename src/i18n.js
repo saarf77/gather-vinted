@@ -11,6 +11,7 @@ export function setLanguage(value){language=chooseLanguage(value);try{if(typeof 
 export function translateDocument(root=document){
  for(const node of root.querySelectorAll('[data-i18n]'))node.textContent=t(node.dataset.i18n);
  for(const attr of ['placeholder','aria-label'])for(const node of root.querySelectorAll(`[data-i18n-${attr}]`))node.setAttribute(attr,t(node.getAttribute(`data-i18n-${attr}`)));
+ for(const node of root.querySelectorAll('[data-language]'))node.hidden=node.dataset.language!==language;
  document.documentElement.lang=language;document.title=t('page.title');
  document.querySelector('#language-switch').value=language;
 }
