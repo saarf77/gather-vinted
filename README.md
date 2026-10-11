@@ -15,6 +15,12 @@ No Vinted account, API key, paid provider, proxy or browser extension is require
 
 Each listing can satisfy only one request. Sellers are ranked by items covered, then minimum item subtotal. Shipping, buyer protection and bundle discounts are confirmed on Vinted.
 
+## Language
+
+Choose **Deutsch** or **English** in the header. The preference is saved in this browser and defaults to its language (German unless English is requested). Interface text is keyed in `src/messages.js`; catalogue label translations are keyed by the Germany IDs in `src/filter-translations.js`. Switching languages keeps the shopping list, native filters and results. Listing titles and user-entered keywords remain as written.
+
+Search always uses **Vinted Germany**, EUR and its size IDs. German keywords are recommended; common English item names such as `jacket`, `bodysuit`, `trousers`, `scarf` and `beanie` map to German names offline via `src/search-terms.js`. Other phrases pass through unchanged; there is no paid or general-purpose translation service.
+
 ## Filters
 
 Filter IDs and German labels were checked against Vinted Germany’s public catalogue and visible filter menus on 2026-10-11. The snapshot is in `src/filter-options.js`.
@@ -73,7 +79,7 @@ node --check src/app.js
 node --check api/search.mjs
 ```
 
-Unit tests cover matching, assignment, parsing, constraints, filter query parameters and query evidence. `tests/browser-smoke.cjs` is an optional integration suite requiring Playwright and installed Chrome. Run it against the local server; live results change over time.
+Unit tests cover matching, assignment, parsing, constraints, filter query parameters, query evidence, message-key parity, filter translations and English-to-German item names. `tests/browser-smoke.cjs` is an optional integration suite requiring Playwright and installed Chrome. Run it against the local server; live results change over time.
 
 ## Import
 

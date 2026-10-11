@@ -11,7 +11,7 @@ createServer(async(req,res)=>{
  try{
   if(req.url==='/api/search' && req.method==='POST'){
    if(req.headers.origin && !['http://127.0.0.1:'+port,'http://localhost:'+port].includes(req.headers.origin)){res.writeHead(403);res.end('Origin denied');return;}
-   if(searchRunning){res.writeHead(429);res.end('Another search is running. Please wait.');return;}
+   if(searchRunning){res.writeHead(429);res.end('Search is busy. Please try again shortly.');return;}
    let input='';for await(const chunk of req){input+=chunk;if(input.length>20000){res.writeHead(413);res.end('Request too large');return;}}
    let data;try{data=JSON.parse(input);}catch{res.writeHead(400);res.end('Invalid JSON');return;}
    searchRunning=true;const controller=new AbortController();res.on('close',()=>controller.abort());

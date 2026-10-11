@@ -1,7 +1,8 @@
+import {itemAliases} from './search-terms.js';
 import { conditionMatches, filterKey, needsEvidence } from './filters.js';
 const normal = value => String(value ?? '').normalize('NFKC').toLocaleLowerCase('de').trim().replace(/\s+/g,' ');
 const aliases = [['scarf','schal','schals','scarves','tuch','halstuch','seidentuch','sjaal','sjaals','écharpe','echarpe','foulard','sciarpa'],['socks','sock','socken','chaussettes','calzini','sokken'],['beanie','mütze','muetze','mützen','bonnet','muts','berretto'],['jumper','sweater','pullover'],['gloves','handschuhe'],['one size','einheitsgröße','einheitsgroesse']];
-function alternatives(word) { return aliases.find(group => group.includes(word)) ?? [word]; }
+function alternatives(word) { return [...new Set([word,...aliases.filter(group=>group.includes(word)).flat(),...itemAliases.filter(group=>group.includes(word)).flat()])]; }
 function hasPhrase(title, phrase) {
  const words = normal(title).match(/[\p{L}\p{N}]+/gu) ?? [];
  const wanted = normal(phrase).match(/[\p{L}\p{N}]+/gu) ?? [];

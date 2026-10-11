@@ -1,7 +1,7 @@
 import { appendFilters, filterKey, validateFilters } from './filters.js';
 const origin='https://www.vinted.de';
-const translations={scarf:'schal',scarves:'schal',socks:'socken',sock:'socken',beanie:'mütze',jumper:'pullover',sweater:'pullover',gloves:'handschuhe'};
-export function searchTerm(value){return translations[value.toLowerCase().trim()]??value.trim();}
+import {germanSearchTerm} from './search-terms.js';
+export const searchTerm=germanSearchTerm;
 export function parseCatalogHtml(html){
  const parts=[];
  for(const match of html.matchAll(/self\.__next_f\.push\((.*?)\)<\/script>/gs)){
