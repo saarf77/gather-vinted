@@ -52,3 +52,15 @@ Broader search preserves its original catalogue depth and adds up to two related
 - German counts and mode descriptions and mobile wrapping at 390 × 844 were exercised in the browser. No paid service, embedding model or vector database was added. This remains curated query expansion rather than general semantic understanding.
 
 Validation: 74 Node tests, JavaScript syntax checks and production build. Tests cover original-page preservation, complete filters and evidence, alternative-query fallback, duplicate merging, cancellation and the maximum 30 total requests.
+
+## Follow-up: photo-first results grid
+
+The supplied 9.85-second recording showed portrait listing images cropped into short, full-width seller rows; some displayed only carpet. Photos now retain their entire image in a 3:4 frame with `object-fit: contain`. Desktop results show several seller cards per row; bundles retain their seller grouping and use larger photos where space permits. Titles, distinct brand labels, size, translated condition and item price remain visible beneath the photos.
+
+- A fresh real Quick search fetched 286 listings, 206 matching sellers and one two-item bundle. Desktop All matches at 1400 × 950 showed three photo columns with no horizontal overflow, including visible socks that had previously been cropped. These snapshot counts are not guarantees.
+- At 390 × 844, single matches displayed in two columns with full photos. A two-item bundle spanned the row with its own two photos. No horizontal overflow.
+- Lowest-price sorting, 2+ and complete-list filters, empty states, expanded details and EN/DE switching were exercised. Expanded details survived language changes.
+- Photo/title/purchase links use the same validated Vinted URL. Keyboard Tab exposed a visible inset focus ring and descriptive name on both real photos and a local imported fixture with no image. No purchase or checkout action was performed.
+- Automated tests cover visible metadata, safe item URLs, escaping untrusted listing text, missing metadata, duplicate catalogue title/brand fallback and accessible placeholder links.
+
+Validation: 79 Node tests, JavaScript syntax checks and production build. Desktop and mobile proof screenshots are in ignored `artifacts/`.

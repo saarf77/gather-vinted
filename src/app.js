@@ -1,7 +1,8 @@
 import {language,t,setLanguage,translateDocument,optionLabel,localizeError,selectedCategoryText} from './i18n.js';
 import {filterOptions,validateFilters,categoryIds,sizeGroups} from './filters.js';
 import {rankSellers,matches} from './matching.js';
-import {initialEntries,validateListings,safeListingUrl} from './data.js';
+import {initialEntries,validateListings} from './data.js';
+import {renderProduct} from './product-card.js';
 import {defaultPreferences,validatePreferences,preferenceSizes,resolveEntry,sizingType,searchCategories,searchPages,nextSearchPages,categorySizes,compatibleSizeIds} from './workflow.js';
 const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -76,7 +77,13 @@ function render(){
  $('#results').innerHTML=visible.map(result=>{
   const best=result===ranked[0]&&filter!=='full'&&$('#sort').value==='coverage';
   const matched=result.selected.map(({entryIndex})=>entries[entryIndex].keyword).join(' + ');
-  return `<article class="seller-card${best?' best':''}">${best?`<div class="best-ribbon"><span aria-hidden="true">✳</span> ${t('results.best')}</div>`:''}<div class="bundle-heading"><div><h3>${escape(t('results.matches',{items:matched}))}</h3><p class="bundle-price">${escape(t('results.total',{price:money(result.subtotal)}))}</p></div><span class="coverage${result.covered===entries.length?' complete':''}">${result.covered===entries.length?'✓ ':''}${t('results.of',{count:result.covered,total:entries.length})}</span></div><div class="items-grid">${result.selected.map(({listing,entryIndex})=>`<div class="product"><div class="product-art ${listing.tone}"><span class="item-match">✓ ${escape(entries[entryIndex].keyword)}</span>${source==='live'&&listing.image?`<img src="${escape(listing.image)}" alt="${escape(listing.title)}" loading="lazy" referrerpolicy="no-referrer">`:art(listing.kind,listing.tone)}</div><h4 class="product-title">${escape(listing.title)}</h4><p class="product-detail">${escape(listing.size||t('results.unknownSize'))}${listing.condition?` · ${escape(conditionLabel(listing.condition))}`:''}</p><p class="product-price">${money(listing.price)}</p>${safeListingUrl(listing.url)?`<a class="listing-link" href="${escape(safeListingUrl(listing.url))}" target="_blank" rel="noopener noreferrer">${t('results.vinted')}</a>`:''}</div>`).join('')}</div><div class="seller-bottom"><span class="seller-name">${escape(sellerName(result))}</span><button class="bundle-toggle" data-seller="${escape(result.sellerId)}" aria-expanded="false">${t('results.details')} <span aria-hidden="true">⌄</span></button></div><div class="bundle-detail" hidden><strong>${t(source==='live'?'results.liveDetail':'results.importDetail')}</strong><p>${t('results.loaded',{count:result.listingCount})}</p>${result.missing.length?`<p>${escape(t('results.missing',{items:result.missing.map(e=>e.keyword).join(', ')}))}</p>`:''}<ul>${result.selected.map(({entryIndex,listing})=>`<li>${escape(entries[entryIndex].keyword)} → ${escape(listing.title)} (${money(listing.price)})</li>`).join('')}</ul><p>${t('results.purchase')} ${t('results.excluded')}</p></div></article>`;
+  return `<article class="seller-card${result.covered===1?' single-match':' bundle-card'}${best?' best':''}">
+   <div class="items-grid">${result.selected.map(({listing,entryIndex})=>renderProduct(listing,{keyword:entries[entryIndex].keyword,live:source==='live',money,conditionLabel,unknownSize:t('results.unknownSize'),viewLabel:t('results.vinted'),art})).join('')}</div>
+   <div class="bundle-heading"><div><h3>${escape(t('results.matches',{items:matched}))}</h3><p class="bundle-price">${escape(t('results.total',{price:money(result.subtotal)}))}</p></div><span class="coverage${result.covered===entries.length?' complete':''}">${result.covered===entries.length?'✓ ':''}${t('results.of',{count:result.covered,total:entries.length})}</span></div>
+   ${best&&result.covered>1?`<div class="best-ribbon"><span aria-hidden="true">✳</span> ${t('results.best')}</div>`:''}
+   <div class="seller-bottom"><span class="seller-name">${escape(sellerName(result))}</span><button class="bundle-toggle" data-seller="${escape(result.sellerId)}" aria-expanded="false">${t('results.details')} <span aria-hidden="true">⌄</span></button></div>
+   <div class="bundle-detail" hidden><strong>${t(source==='live'?'results.liveDetail':'results.importDetail')}</strong><p>${t('results.loaded',{count:result.listingCount})}</p>${result.missing.length?`<p>${escape(t('results.missing',{items:result.missing.map(e=>e.keyword).join(', ')}))}</p>`:''}<ul>${result.selected.map(({entryIndex,listing})=>`<li>${escape(entries[entryIndex].keyword)} → ${escape(listing.title)} (${money(listing.price)})</li>`).join('')}</ul><p>${t('results.purchase')} ${t('results.excluded')}</p></div>
+  </article>`;
  }).join('');
 }
 function checkOptions(target,type,checked=[]){

@@ -41,6 +41,8 @@ Known accessory keywords have German, French, Dutch and Italian title aliases. O
 
 Results cover the fetched search pages, not the whole marketplace or every seller’s wardrobe. Catalogue results expose seller IDs, so sellers display as `Seller #ID`. Responses are cached for five minutes.
 
+Results use a photo-first grid with full portrait photos, listing titles, brands when available, sizes, conditions and item prices. Photos and titles open the same Vinted listing. Items from one seller stay grouped with their subtotal and coverage; search details can be expanded. Mobile shows two single matches per row and keeps bundles together across the full row.
+
 This unofficial tool reads listing data embedded in public Vinted catalogue HTML, without executing its scripts. Vinted can block requests or change its page format. The app reports failures without substituting demo data or using an access bypass. Successful access does not establish Vinted authorisation. See [Vinted’s terms](https://www.vinted.de/terms-and-conditions).
 
 ## Privacy and credentials
