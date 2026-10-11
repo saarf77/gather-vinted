@@ -1,4 +1,4 @@
-import {language,t,setLanguage,translateDocument,optionLabel,localizeError} from './i18n.js';
+import {language,t,setLanguage,translateDocument,optionLabel,localizeError,selectedCategoryText} from './i18n.js';
 import {filterOptions,validateFilters,categoryIds,sizeGroups} from './filters.js';
 import {rankSellers} from './matching.js';
 import {initialEntries,validateListings,safeListingUrl} from './data.js';
@@ -62,7 +62,7 @@ function render(){
  $('#preferences-button').textContent=t(preferences.departmentId||preferences.conditionIds.length?'preferences.change':'preferences.edit');
  $('#preferences-summary').textContent=preferenceSummary();
  $('#live-search').textContent=t(searching?'search.cancel':'search.button');$('#search-pages').disabled=searching;
- $('#entries').innerHTML=resolved.map(e=>`<article class="entry"><div class="entry-head"><span class="entry-icon">${art(kindFor(e.keyword))}</span><h3>${escape(e.keyword)}</h3><div class="entry-controls"><button class="small-button edit-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.edit',{item:e.keyword}))}">✎</button><button class="small-button remove-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.remove',{item:e.keyword}))}">×</button></div></div><p class="entry-info">${escape(entrySizeLabels(e).length?entrySizeLabels(e).join(', '):t('filters.anySize'))} · ${escape(e.maxPrice===null?t('filters.anyPrice'):t('filters.upTo',{price:money(e.maxPrice)}))}${e.brand?`<br>${escape(e.brand)}`:''}${e.departmentIds?.length?`<br>${e.departmentIds.map(id=>escape(departmentName(id))).join(', ')}`:''}${categoryIds(e).length?` · ${escape([...new Set(categoryIds(e).map(id=>label('category',id).split(' / ').at(-1)))].join(', '))}`:''}${e.conditionIds?.length?` · ${escape(conditionSummary(e.conditionIds))}`:''}</p></article>`).join('')||`<p class="muted">${t('items.start')}</p>`;
+ $('#entries').innerHTML=resolved.map(e=>`<article class="entry"><div class="entry-head"><span class="entry-icon">${art(kindFor(e.keyword))}</span><h3>${escape(e.keyword)}</h3><div class="entry-controls"><button class="small-button edit-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.edit',{item:e.keyword}))}">✎</button><button class="small-button remove-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.remove',{item:e.keyword}))}">×</button></div></div><p class="entry-info">${escape(entrySizeLabels(e).length?entrySizeLabels(e).join(', '):t('filters.anySize'))} · ${escape(e.maxPrice===null?t('filters.anyPrice'):t('filters.upTo',{price:money(e.maxPrice)}))}${e.brand?`<br>${escape(e.brand)}`:''}${e.departmentIds?.length?`<br>${e.departmentIds.map(id=>escape(departmentName(id))).join(', ')}`:''}${categoryIds(e).length?`<br>${escape(selectedCategoryText(categoryIds(e).map(id=>filterOptions.categories.find(c=>c.id===id))))}`:''}${e.conditionIds?.length?` · ${escape(conditionSummary(e.conditionIds))}`:''}</p></article>`).join('')||`<p class="muted">${t('items.start')}</p>`;
  $('#source-label').innerHTML=source==='live'?`<strong>${t('source.live')}</strong> · ${t(listings.length?'source.fetched':'source.ready',{count:listings.length})}`:source==='empty'?`<strong>${t('source.empty')}</strong> · ${t('source.importHelp')}`:`<strong>${t('source.import')}</strong> · ${t('source.importCount',{count:listings.length})}`;
  $('#multi-count').textContent=ranked.filter(r=>r.covered>=2).length;$('#all-count').textContent=ranked.length;$('#full-count').textContent=complete.length;
  for(const [id,value] of [['all-filter','all'],['multi-filter','multi'],['full-filter','full']]){$('#'+id).classList.toggle('active',filter===value);$('#'+id).setAttribute('aria-pressed',String(filter===value));}
@@ -72,7 +72,7 @@ function render(){
  let visible=filter==='full'?complete:filter==='multi'?ranked.filter(r=>r.covered>=2):[...ranked];
  if($('#sort').value==='price')visible=[...visible].sort((a,b)=>a.subtotal-b.subtotal||b.covered-a.covered||a.sellerId.localeCompare(b.sellerId));
  $('#results-summary').textContent=t(entries.length?'results.summary':'results.first',{count:ranked.length,complete:complete.length});
- if(!visible.length){const kind=!entries.length?'list':!listings.length?'ready':filter==='multi'?'multi':filter==='full'?'full':'none';$('#results').innerHTML=`<div class="empty"><span class="empty-symbol" aria-hidden="true">⌁</span><h3>${t(`empty.${kind}Title`)}</h3><p>${t(`empty.${kind}Body`)}</p>${filter!=='all'&&listings.length?`<button class="secondary-button" id="empty-all">${t('empty.all')}</button>`:''}</div>`;return;}
+ if(!visible.length){const kind=!entries.length?'list':!listings.length?'ready':filter==='multi'?'multi':filter==='full'?'full':'none';$('#results').innerHTML=`<div class="empty"><span class="empty-symbol" aria-hidden="true">⌁</span><h3>${t(`empty.${kind}Title`)}</h3><p>${t(`empty.${kind}Body`,{count:ranked.length})}</p>${filter!=='all'&&listings.length?`<button class="secondary-button" id="empty-all">${t('empty.all')}</button>`:''}</div>`;return;}
  $('#results').innerHTML=visible.map(result=>{
   const best=result===ranked[0]&&filter!=='full'&&$('#sort').value==='coverage';
   const matched=result.selected.map(({entryIndex})=>entries[entryIndex].keyword).join(' + ');
@@ -112,7 +112,7 @@ function renderCategories(){
  // Keep selected categories visible even when the query or department changes.
  const options=[...selected,...choices.filter(o=>!selectedCategoryIds.has(o.id))];
  $('#category-options').innerHTML=options.map(c=>`<label class="check-option category-option"><input type="checkbox" value="${c.id}" ${selectedCategoryIds.has(c.id)?'checked':''}><span>${escape(optionLabel('category',c))}</span></label>`).join('');
- $('#category-summary').textContent=selected.length===1?optionLabel('category',selected[0]).split(' / ').at(-1):t(selected.length?'filters.categoriesSelected':'filters.anyCategory',{count:selected.length});
+ $('#category-summary').textContent=selected.length?selectedCategoryText(selected):t('filters.anyCategory');
  $('#category-count').textContent=t(choices.length?'filters.categoryCount':'filters.noCategories',{count:choices.length});
  $('#clear-categories').disabled=!selected.length;
 }

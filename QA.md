@@ -29,3 +29,14 @@ Manual browser testing used the live Vercel app and an isolated local workspace 
 Automated validation: 64 Node tests, JavaScript syntax check and production build. Tests cover native filters, matching, unique listing assignment, query evidence, sizing, translations, parsing and search limits. Browser smoke scripts were not run; the flows above were exercised through the browser directly.
 
 Gather compares the fetched catalogue pages. It does not exhaustively inspect every seller's wardrobe or all Vinted listings. Item URLs and real listing fields were inspected in results; checkout, payment, shipping and destination-page availability were not tested. No purchase was made. Vinted access can change or be blocked, and item availability must be checked on Vinted.
+
+## Follow-up: pyjamas and socks
+
+The reported two-item list used Kids size 98 pyjamas up to €10 and socks in EU 25–27 or 28–30 up to €15. A comparable search selected girls' Underwear & socks (1252) or boys' Socks (1757) within the socks item. Multiple native categories already use OR. The old shortened summary hid the branches and the difference between a parent category and a leaf.
+
+- A saved real search contained seller 178980385's “Schlafanzüge dünn paw patrol” (€2, size 98) and “Dicke Stoppersocken” (€2, size 25–27). Strict title matching rejected the plural and compound words. Explicit aliases now recover this €4 bundle while unrelated “Sockenhalter” still fails.
+- A fresh browser search after the fix fetched 549 listings on six pages and found seller 63344400 with “Merino Socken Gr. 29/30” (€3) and “Silly Santa Pyjama” (size 98, €5): €8 subtotal. Results change as Vinted listings change.
+- Selected categories now show their full paths joined with “or” / “oder” in the editor and list. English/German switching and mobile wrapping were checked at 390 × 844, with no horizontal overflow.
+- The empty 2+ view now explains the single-match count and that full wardrobes have not been checked.
+
+Validation for this follow-up: 67 Node tests, JavaScript syntax check and production build.

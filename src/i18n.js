@@ -40,6 +40,9 @@ export function optionLabel(type,option,locale=language){
  }
  return label;
 }
+export function selectedCategoryText(categories,locale=language){
+ return categories.map(category=>optionLabel('category',category,locale)).join(` ${createTranslator(locale)('filters.or')} `);
+}
 export function localizeError(message){
  const record=/^Listing (\d+): (.*)$/.exec(message);if(record)return t('import.record',{index:record[1],reason:localizeError(record[2])});
  const length=/^(\w+) must be text between 1 and 250 characters\.$/.exec(message);if(length)return t('import.textLength',{field:length[1]});

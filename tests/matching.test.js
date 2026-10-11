@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { rankSellers, matches } from '../src/matching.js';
 import { validateListings, safeListingUrl } from '../src/data.js';
+import {filterKey} from '../src/filters.js';
 const want = (keyword, extra = {}) => ({ id: keyword, keyword, sizes: [], brand: '', category: '', maxPrice: null, ...extra });
 const item = (id, sellerId, title, extra = {}) => ({ id, sellerId, sellerName: sellerId, title, price: 10, size: 'M', brand: 'COS', category: 'accessories', ...extra });
 test('full coverage ranks before a cheaper partial match', () => {
@@ -62,4 +63,17 @@ test('matches explicitly displayed size alternatives and normalises range punctu
 
 test('common singular and plural German item names match English requests',()=>{
  for(const [keyword,title] of [['Sneakers','Nike Sneaker'],['Tights','Strumpfhosen'],['Rings','Silberne Ringe'],['Bras','BHs Set']])assert.equal(matches({keyword},{title,price:5}),true,`${keyword}: ${title}`);
+});
+
+test('German pyjama plurals and common compound sock names remain valid matches',()=>{
+ for(const [keyword,titles] of [['Schlafanzug',['Schlafanzüge Größe 98/104','Set aus 3 Schlafanzügen','Next Pyjama Set 3tlg','Weihnachtsschlafanzug']],['Socks',['8 Kindersocken','Wollsocken mit Alpaka','Stoppersocken','Tennissocken']]])for(const title of titles)assert.equal(matches(want(keyword),item('1','a',title)),true,title);
+ assert.equal(matches(want('Socks'),item('1','a','Sockenhalter')),false);
+});
+
+test('one seller with Schlafanzüge and Stoppersocken satisfies the two-item list',()=>{
+ const entries=[want('Schlafanzug',{id:'pyjamas',departmentIds:[1193],sizeIds:[1567],maxPrice:10}),want('Socks',{id:'socks',departmentIds:[1193],categoryIds:[1252,1757],sizeIds:[1511,1512],maxPrice:15})];
+ const listings=[item('10323058305','178980385','Schlafanzüge dünn paw patrol',{price:2,size:'3 Jahre / 98',filterEvidence:{pyjamas:filterKey(entries[0])}}),item('10330372580','178980385','Dicke Stoppersocken',{price:2,size:'25–27',filterEvidence:{socks:filterKey(entries[1])}})];
+ const ranked=rankSellers(entries,listings);
+ assert.equal(ranked[0]?.covered,2);assert.equal(ranked[0]?.subtotal,4);
+ assert.equal(ranked[0].selected.length,2);
 });

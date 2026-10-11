@@ -44,3 +44,10 @@ test('sock sizes use verified adult letters and explicit EU foot ranges for kids
  assert.equal(optionLabel('size',filterOptions.sizes.find(s=>s.id===1509),'en'),'EU 19–21');
  assert.equal(optionLabel('size',filterOptions.sizes.find(s=>s.id===1509),'de'),'EU 19–21');
 });
+
+test('selected categories retain their full branches and show alternatives',async()=>{
+ const {selectedCategoryText}=await import('../src/i18n.js');
+ const categories=[1252,1757].map(id=>filterOptions.categories.find(c=>c.id===id));
+ assert.equal(selectedCategoryText(categories,'en'),"Kids / Girls clothing / Underwear & socks or Kids / Boys clothing / Underwear & socks / Socks");
+ assert.equal(selectedCategoryText(categories,'de'),"Kinder / Mädchen / Unterwäsche & Socken oder Kinder / Jungs / Unterwäsche / Socken");
+});
