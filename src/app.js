@@ -1,8 +1,8 @@
 import {language,t,setLanguage,translateDocument,optionLabel,localizeError} from './i18n.js';
-import {filterOptions,validateFilters,categoryIds} from './filters.js';
+import {filterOptions,validateFilters,categoryIds,sizeGroups} from './filters.js';
 import {rankSellers} from './matching.js';
 import {initialEntries,validateListings,safeListingUrl} from './data.js';
-import {defaultPreferences,validatePreferences,preferenceSizes,resolveEntry,sizingType,searchCategories,searchPages,nextSearchPages} from './workflow.js';
+import {defaultPreferences,validatePreferences,preferenceSizes,resolveEntry,sizingType,searchCategories,searchPages,nextSearchPages,categorySizes,compatibleSizeIds} from './workflow.js';
 const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const money=value=>new Intl.NumberFormat(language==='de'?'de-DE':'en-IE',{style:'currency',currency:'EUR'}).format(value);
@@ -10,7 +10,7 @@ const KEY='gather.workspace.v1';
 const freshEntries=()=>structuredClone(initialEntries).map(e=>({...e,sizes:[],useListPreferences:true}));
 let entries=freshEntries(),listings=[],preferences=defaultPreferences(),source='live',filter='multi';
 let editId=null,searching=false,searchController=null,statusMessage=null,lastSearchPages=0,storageProblem=false;
-let selectedSizeIds=new Set(),legacySizes=[],selectedCategoryIds=new Set(),preferenceSizeIds=new Set();
+let selectedSizeIds=new Set(),selectedSizeGroups=[],legacySizes=[],selectedCategoryIds=new Set(),preferenceSizeIds=new Set();
 const conditionSets={'':[],6:[6],1:[6,1],2:[6,1,2],3:[6,1,2,3],4:[6,1,2,3,4]};
 try{
  const saved=JSON.parse(localStorage.getItem(KEY)??'null');
@@ -84,19 +84,24 @@ function checkOptions(target,type,checked=[]){
  $(target).innerHTML=options.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${checked.includes(o.id)?'checked':''}>${escape(optionLabel(type,o))}</label>`).join('');
 }
 const checkedValues=selector=>[...document.querySelectorAll(`${selector} input:checked`)].map(n=>Number(n.value));
-function itemDraft(){return {id:editId??'draft',keyword:$('#keyword').value,sizes:legacySizes,sizeIds:[...selectedSizeIds],departmentIds:checkedValues('#department-options'),conditionIds:checkedValues('#condition-options'),categoryIds:[...selectedCategoryIds],useListPreferences:$('#use-preferences').checked};}
+function itemDraft(){return {id:editId??'draft',keyword:$('#keyword').value,sizes:legacySizes,sizeIds:[...selectedSizeIds],sizeGroups:selectedSizeIds.size?selectedSizeGroups:[],departmentIds:checkedValues('#department-options'),conditionIds:checkedValues('#condition-options'),categoryIds:[...selectedCategoryIds],useListPreferences:$('#use-preferences').checked};}
 const draftResolved=()=>resolveEntry(itemDraft(),preferences);
-const sizeChoices=()=>{const departments=draftResolved().departmentIds;return filterOptions.sizes.filter(o=>!departments.length||departments.includes(o.departmentId));};
+const sizeChoices=()=>categorySizes(itemDraft(),preferences);
 function updateSizeSummary(){
  const raw=itemDraft(),resolved=resolveEntry(raw,preferences),labels=entrySizeLabels(resolved);
  $('#size-summary').textContent=labels.length?t(!raw.sizeIds.length&&!raw.sizes.length?'preferences.inheritedSize':'filters.sizes',{sizes:labels.join(', ')}):t('filters.anySize');
  if(raw.sizeIds.length||raw.sizes.length)$('#size-summary').textContent=labels.join(', ');
- const sockGroup=$('#size-group').value.split(':').slice(1).join(':').startsWith('Socken für');
- $('#item-size-hint').textContent=sockGroup?t($('#size-group').value.startsWith('1193:')?'filters.kidsSocksHint':'filters.adultSocksHint'):sizingType(raw)!=='clothing'?t('preferences.specialSize'):'';
+ const choices=sizeChoices(),socks=choices.length&&choices.every(s=>s.group.startsWith('Socken für'));
+ $('#item-size-hint').textContent=!choices.length?t(raw.categoryIds.length?'filters.noCategorySizes':'filters.categoryFirst'):socks?t(choices.every(s=>s.departmentId===1193)?'filters.kidsSocksHint':'filters.adultSocksHint'):'';
+ $('#size-picker').hidden=!choices.length;
 }
 function renderSizeChoices(){
- const choices=sizeChoices().filter(o=>`${o.departmentId}:${o.group}`===$('#size-group').value);
- $('#size-options').innerHTML=choices.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${selectedSizeIds.has(o.id)?'checked':''}>${escape(sizeLabel(o))}</label>`).join('')||`<p class="muted">${t('filters.chooseHint')}</p>`;
+ const choices=sizeChoices(),groups=[...new Set(choices.map(s=>`${s.departmentId}:${s.group}`))];
+ $('#size-options').innerHTML=groups.map(group=>{
+  const options=choices.filter(s=>`${s.departmentId}:${s.group}`===group),first=options[0];
+  return `<fieldset class="size-section"><legend>${escape(departmentName(first.departmentId))} · ${escape(optionLabel('group',first.group))}</legend><div class="size-options">${options.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${selectedSizeIds.has(o.id)?'checked':''}>${escape(sizeLabel(o))}</label>`).join('')}</div></fieldset>`;
+ }).join('');
+ $('#clear-sizes').disabled=!selectedSizeIds.size&&!legacySizes.length;
  updateSizeSummary();
 }
 function renderCategories(){
@@ -111,41 +116,40 @@ function renderCategories(){
  $('#clear-categories').disabled=!selected.length;
 }
 
-function updateFilterMenus(preferredGroup='',resetGroup=false){
+function updateFilterMenus(reconcile=false){
  renderCategories();
  $('#department-default-hint').textContent=t($('#use-preferences').checked&&preferences.departmentId?'filters.emptyDefault':'filters.anyUnchecked');
  $('#condition-default-hint').textContent=t($('#use-preferences').checked&&preferences.conditionIds.length?'filters.emptyDefault':'filters.anyUnchecked');
- const choices=sizeChoices(),departments=draftResolved().departmentIds;
- const groups=[...new Map(choices.map(o=>[`${o.departmentId}:${o.group}`,`${departmentName(o.departmentId)} · ${optionLabel('group',o.group)}`])).entries()];
- const previous=resetGroup?'':preferredGroup||$('#size-group').value;
- $('#size-group').innerHTML=`<option value="">${t('filters.chooseType')}</option>`+groups.map(([value,name])=>`<option value="${escape(value)}">${escape(name)}</option>`).join('');
- if(groups.some(([key])=>key===previous))$('#size-group').value=previous;
- else if(departments.length===1){
-  const type=sizingType(itemDraft()),department=departments[0];
-  const group=choices.find(o=>type==='shoes'?/schuh|schuhe/i.test(o.group):type==='hats'?/mützen|hüte/i.test(o.group):type==='socks'?/socken/i.test(o.group):['Kleidergrößen','Größen Männer','Baby- und Kindergrößen'].includes(o.group));
-  if(group)$('#size-group').value=`${department}:${group.group}`;
+ if(reconcile){
+  const choices=sizeChoices(),kept=compatibleSizeIds([...selectedSizeIds],choices);
+  if(kept.length!==selectedSizeIds.size||legacySizes.length){$('#item-size-notice').textContent=t('filters.sizeTypeChanged');$('#item-size-notice').hidden=false;}
+  selectedSizeIds=new Set(kept);legacySizes=[];
+  selectedSizeGroups=[...new Set(choices.filter(s=>selectedSizeIds.has(s.id)).map(s=>`${s.departmentId}:${s.group}`))];
  }
- // Preserve explicit saved sizes. Changing defaults must never silently remove an override.
  renderSizeChoices();
 }
 checkOptions('#department-options','department');checkOptions('#condition-options','condition');
 $('#brand-options').innerHTML=filterOptions.brands.map(o=>`<option value="${escape(o.label)}"></option>`).join('');
-$('#department-options').addEventListener('change',()=>updateFilterMenus());
+$('#department-options').addEventListener('change',()=>updateFilterMenus(true));
 $('#use-preferences').addEventListener('change',()=>updateFilterMenus());
-$('#keyword').addEventListener('input',()=>updateFilterMenus('',!selectedSizeIds.size&&!legacySizes.length));
+$('#keyword').addEventListener('input',()=>updateFilterMenus());
+$('#keyword').addEventListener('blur',()=>{if(!selectedCategoryIds.size)updateFilterMenus(true);});
 $('#category-search').addEventListener('input',renderCategories);
-$('#category-options').addEventListener('change',event=>{const id=Number(event.target.value);event.target.checked?selectedCategoryIds.add(id):selectedCategoryIds.delete(id);updateFilterMenus('',!selectedSizeIds.size&&!legacySizes.length);});
-$('#clear-categories').addEventListener('click',()=>{selectedCategoryIds.clear();updateFilterMenus('',!selectedSizeIds.size&&!legacySizes.length);});
-$('#size-group').addEventListener('change',renderSizeChoices);
-$('#size-options').addEventListener('change',event=>{legacySizes=[];const id=Number(event.target.value);event.target.checked?selectedSizeIds.add(id):selectedSizeIds.delete(id);if(selectedSizeIds.size)updateSizeSummary();else updateFilterMenus();});
-$('#clear-sizes').addEventListener('click',()=>{selectedSizeIds.clear();legacySizes=[];updateFilterMenus();});
+$('#category-options').addEventListener('change',event=>{const id=Number(event.target.value);event.target.checked?selectedCategoryIds.add(id):selectedCategoryIds.delete(id);updateFilterMenus(true);});
+$('#clear-categories').addEventListener('click',()=>{selectedCategoryIds.clear();updateFilterMenus(true);});
+$('#size-options').addEventListener('change',event=>{
+ $('#item-size-notice').hidden=true;legacySizes=[];const id=Number(event.target.value);event.target.checked?selectedSizeIds.add(id):selectedSizeIds.delete(id);
+ selectedSizeGroups=[...new Set(sizeChoices().filter(s=>selectedSizeIds.has(s.id)).map(s=>`${s.departmentId}:${s.group}`))];
+ renderSizeChoices();
+});
+$('#clear-sizes').addEventListener('click',()=>{selectedSizeIds.clear();selectedSizeGroups=[];legacySizes=[];updateFilterMenus();});
 function openItem(id=null){
- if(searching)return;editId=id;$('#item-form').reset();$('#size-picker').open=false;$('#more-filters').open=false;$('#category-picker').open=false;$('#item-error').textContent='';$('#item-dialog-title').textContent=t(id?'editor.edit':'editor.add');
- const entry=entries.find(e=>e.id===id);selectedSizeIds=new Set(entry?.sizeIds??[]);legacySizes=selectedSizeIds.size?[]:entry?.sizes??[];selectedCategoryIds=new Set(entry?categoryIds(entry):[]);
+ if(searching)return;editId=id;$('#item-form').reset();$('#size-picker').open=false;$('#more-filters').open=false;$('#category-picker').open=false;$('#item-error').textContent='';$('#item-size-notice').hidden=true;$('#item-dialog-title').textContent=t(id?'editor.edit':'editor.add');
+ const entry=entries.find(e=>e.id===id);selectedSizeIds=new Set(entry?.sizeIds??[]);selectedSizeGroups=entry?sizeGroups(entry):[];legacySizes=selectedSizeIds.size?[]:entry?.sizes??[];selectedCategoryIds=new Set(entry?categoryIds(entry):[]);
  if(entry){$('#keyword').value=entry.keyword;$('#max-price').value=entry.maxPrice??'';$('#brand').value=entry.brand;}
  $('#use-preferences').checked=entry?.useListPreferences!==false;
  checkOptions('#department-options','department',entry?.departmentIds);checkOptions('#condition-options','condition',entry?.conditionIds);
- $('#size-group').value='';const selected=filterOptions.sizes.find(o=>selectedSizeIds.has(o.id));updateFilterMenus(selected?`${selected.departmentId}:${selected.group}`:'');
+ updateFilterMenus();
  $('#item-dialog').showModal();
 }
 $('#add-button').addEventListener('click',()=>openItem());
@@ -223,8 +227,8 @@ async function runSearch(pages){
 $('#live-search').addEventListener('click',()=>runSearch(searchPages($('#search-pages').value,entries.length)));
 $('#search-more').addEventListener('click',()=>{const pages=nextSearchPages(lastSearchPages,entries.length);if(pages)runSearch(pages);else toast(t('search.moreLimit'));});
 $('#language-switch').addEventListener('change',event=>{
- const expanded=[...document.querySelectorAll('.bundle-toggle[aria-expanded="true"]')].map(n=>n.dataset.seller),departments=checkedValues('#department-options'),conditions=checkedValues('#condition-options'),group=$('#size-group').value;
- setLanguage(event.target.value);translateDocument();checkOptions('#department-options','department',departments);checkOptions('#condition-options','condition',conditions);updateFilterMenus(group);$('#item-dialog-title').textContent=t(editId?'editor.edit':'editor.add');
+ const expanded=[...document.querySelectorAll('.bundle-toggle[aria-expanded="true"]')].map(n=>n.dataset.seller),departments=checkedValues('#department-options'),conditions=checkedValues('#condition-options');
+ setLanguage(event.target.value);translateDocument();checkOptions('#department-options','department',departments);checkOptions('#condition-options','condition',conditions);updateFilterMenus();$('#item-dialog-title').textContent=t(editId?'editor.edit':'editor.add');
  renderPreferenceDepartments(Number($('#preference-department').value)||null);renderPreferenceChoices();
  if(statusMessage)setStatus(statusMessage.key,statusMessage.params);$('#toast').hidden=true;render();
  for(const button of document.querySelectorAll('.bundle-toggle'))if(expanded.includes(button.dataset.seller)){button.setAttribute('aria-expanded','true');button.innerHTML=`${t('results.hide')} <span aria-hidden="true">⌃</span>`;button.closest('.seller-card').querySelector('.bundle-detail').hidden=false;}

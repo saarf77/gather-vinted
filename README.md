@@ -9,7 +9,7 @@ No Vinted account, API key, paid provider, proxy or browser extension is require
 ## Use
 
 1. Optionally set **List preferences** once: department, clothing sizes and minimum condition.
-2. Add items with name, size and maximum price. **More filters** contains brand, department, searchable category and condition. Own filters override list defaults; disable **Use list preferences** for fully independent item filters. Shoe, hat and sock sizes remain separate.
+2. Add items with name, searchable categories, matching sizes and maximum price. **More filters** contains brand, department and condition. Own filters override list defaults; disable **Use list preferences** for fully independent item filters. Shoe, hat and sock sizes remain separate.
 3. Choose **Quick search** (1 page per item) or **Broader search** (up to 3), beside the shopping list. Results default to sellers matching two or more requests.
 4. Use **Search more** to expand towards 5 pages per item, within 30 pages total. It re-runs the broader range and replaces results. Cancellation or failure preserves prior successful results.
 5. Open item links from bundle cards to check availability and buy on Vinted. Cards lead with matched item names and item subtotal; fetched counts and missing items appear in details.
@@ -90,4 +90,4 @@ Unit tests cover matching, assignment, parsing, constraints, filter query parame
 [{"id":"1","sellerId":"seller-1","sellerName":"Anna","title":"Wool scarf","size":"One size","condition":"Sehr gut","price":8,"currency":"EUR"}]
 ```
 
-Category filters use searchable checkboxes: select one or more acceptable Vinted categories, or leave empty for any category. Existing single-category selections remain compatible. Sock sizes stay aligned with Vinted: children use EU foot-size ranges, while adults use Vinted’s department-specific letters and foot ranges. Age labels belong to children’s clothing sizes; no age-to-foot conversion is assumed.
+Categories appear before sizes. The selected categories automatically determine the relevant size groups, including separate groups for mixed category selections; no size-type dropdown is needed. Changing categories clears only incompatible size selections with a notice. Category filters use searchable checkboxes: select one or more acceptable Vinted categories, or leave empty for any category. Existing single-category selections remain compatible. Sock sizes stay aligned with Vinted: children use EU foot-size ranges, while adults use Vinted’s department-specific letters and foot ranges. Age labels belong to children’s clothing sizes; no age-to-foot conversion is assumed.

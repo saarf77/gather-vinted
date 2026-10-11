@@ -2,7 +2,8 @@ import { filterOptions } from './filter-options.js';
 export { filterOptions };
 const normal=value=>String(value??'').normalize('NFKC').toLocaleLowerCase('de').trim();
 export function categoryIds(entry){return entry.categoryIds?.length?entry.categoryIds:entry.categoryId?[entry.categoryId]:[];}
-export function catalogIds(entry){const ids=categoryIds(entry);return ids.length?ids:entry.departmentIds??[];}
+export function sizeGroups(entry){return entry.sizeGroups??(entry.sizeGroup?[entry.sizeGroup]:[]);}
+export function catalogIds(entry){const ids=categoryIds(entry);return ids.length?ids:entry.departmentIds?.length?entry.departmentIds:entry.sizeIds?.length?[...new Set(sizeGroups(entry).map(group=>Number(group.split(':')[0])))]:[];}
 export function filterKey(entry){return JSON.stringify({catalog:catalogIds(entry).slice().sort((a,b)=>a-b),size:(entry.sizeIds??[]).slice().sort((a,b)=>a-b),brand:entry.brandId??null,status:(entry.conditionIds??[]).slice().sort((a,b)=>a-b)});}
 export function needsEvidence(entry){return catalogIds(entry).length>0 || entry.sizeIds?.length>0 || Boolean(entry.brandId);}
 export function validateFilters(entry){
@@ -13,7 +14,13 @@ export function validateFilters(entry){
  const categories=categoryIds(entry).map(id=>filterOptions.categories.find(c=>c.id===id));
  if(entry.departmentIds?.length&&categories.some(c=>!entry.departmentIds.includes(c.departmentId)))throw new Error('Category does not belong to the selected department.');
  const departments=categories.length?[...new Set(categories.map(c=>c.departmentId))]:entry.departmentIds??[];
- if(departments.length&&(entry.sizeIds??[]).some(id=>!departments.includes(filterOptions.sizes.find(s=>s.id===id).departmentId)))throw new Error('Size does not belong to the selected department. Clear the size selection or choose a matching department.');
+ const groups=sizeGroups(entry);
+ if(!Array.isArray(groups)||groups.length>30||groups.some(group=>typeof group!=='string'||!filterOptions.sizes.some(s=>`${s.departmentId}:${s.group}`===group)))throw new Error('Invalid Vinted filter selection.');
+ if(groups.length){
+  if((entry.sizeIds??[]).some(id=>!filterOptions.sizes.some(s=>s.id===id&&groups.includes(`${s.departmentId}:${s.group}`))))throw new Error('Invalid Vinted filter selection.');
+  if(departments.length&&groups.some(group=>!departments.includes(Number(group.split(':')[0]))))throw new Error('Size does not belong to the selected department. Clear the size selection or choose a matching department.');
+ }
+ if(departments.length&&(entry.sizeIds??[]).some(id=>!filterOptions.sizes.some(s=>s.id===id&&departments.includes(s.departmentId))))throw new Error('Size does not belong to the selected department. Clear the size selection or choose a matching department.');
 }
 export function appendFilters(url,entry){
  validateFilters(entry);

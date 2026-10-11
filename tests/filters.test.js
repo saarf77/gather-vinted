@@ -55,3 +55,20 @@ test('multiple categories narrow the catalogue and preserve their complete evide
 test('category arrays reject unknown IDs, invalid shapes and incompatible departments',()=>{
  for(const entry of [{categoryIds:[999999]},{categoryIds:'1600'},{categoryIds:[1600],departmentIds:[5]},{categoryIds:[183],sizeIds:[623]}])assert.throws(()=>validateFilters(entry));
 });
+test('shared native size IDs validate against any supported department',()=>{
+ assert.doesNotThrow(()=>validateFilters({departmentIds:[5],sizeIds:[1202],sizeGroup:'5:Ringe'}));
+ assert.throws(()=>validateFilters({departmentIds:[5],sizeIds:[1509],sizeGroup:'5:Ringe'}));
+});
+test('a shared size group narrows its own catalogue and rejects contradictory groups',()=>{
+ assert.deepEqual(catalogIds({sizeIds:[1202],sizeGroup:'5:Ringe'}),[5]);
+ assert.throws(()=>validateFilters({departmentIds:[5],sizeIds:[1202],sizeGroup:'1904:Ringe'}));
+ assert.throws(()=>validateFilters({sizeIds:[1202],sizeGroup:'5:not-a-group'}));
+});
+
+test('multiple saved size groups scope shared native IDs and validate their union',()=>{
+ const entry={sizeIds:[1202,1523],sizeGroups:['5:Ringe','5:Socken für Herren']};
+ assert.deepEqual(catalogIds(entry),[5]);
+ assert.doesNotThrow(()=>validateFilters(entry));
+ assert.throws(()=>validateFilters({...entry,sizeGroups:['1904:Ringe']}));
+ assert.throws(()=>validateFilters({...entry,sizeGroups:['unknown']}));
+});
