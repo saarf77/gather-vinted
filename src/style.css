@@ -64,7 +64,9 @@ main.shopping-flow{max-width:1560px;padding-left:4%;padding-right:4%}
 @media(max-width:440px){#results .product-title{font-size:12px}#results .product-brand,#results .product-detail,#results .listing-link{font-size:11px}#results .bundle-heading{padding:10px}#results .seller-bottom{padding:6px 10px}#results .single-match .coverage{margin-top:3px}}
 
 /* Small, bounded result batches; keep browsing progress on the right. */
-.results-tools{position:sticky;top:8px;z-index:5;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:12px 24px;padding:10px 14px;margin-bottom:16px;background:var(--paper,#faf9f6);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 8px #263c3010}
+#results-tools-slot{margin-bottom:16px}
+#results-tools-slot[hidden]{display:none}
+.results-tools{position:static;z-index:5;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:12px 24px;padding:10px 14px;background:var(--paper,#faf9f6);border:1px solid var(--line);border-radius:8px;box-shadow:0 2px 8px #263c3010}
 .results-tools[hidden],.results-search-progress[hidden],.results-progress[hidden],.load-results[hidden],#load-more-results[hidden],.back-to-top[hidden]{display:none}
 .results-search-progress,.results-progress{display:flex;flex-direction:column;gap:5px;font-size:12px;line-height:1.5;color:var(--teal);min-width:160px;max-width:100%}
 .results-tools progress{display:block;width:100%;height:6px;border:0;border-radius:9px;overflow:hidden;accent-color:var(--teal);background:#dce7e0}
@@ -76,9 +78,15 @@ main.shopping-flow{max-width:1560px;padding-left:4%;padding-right:4%}
 .load-results .secondary-button{min-height:44px;padding:12px 24px}
 .back-to-top{position:fixed;right:var(--scroll-control-right,4%);max-width:calc(100% - 24px);bottom:calc(20px + env(safe-area-inset-bottom));z-index:20;display:flex;align-items:center;gap:8px;min-height:44px;padding:11px 16px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--teal);font:600 13px 'DM Sans',sans-serif;box-shadow:0 3px 12px #263c3020;cursor:pointer}
 body:has(dialog[open]) .back-to-top,body:has(dialog[open]) .page-scroll-progress{display:none}
-@media(max-width:740px){.results-tools{top:6px;gap:10px;padding:9px 12px}.back-to-top{bottom:calc(12px + env(safe-area-inset-bottom));font-size:12px;padding:10px 12px}}
+@media(max-width:740px){.results-tools{gap:10px;padding:9px 12px}.back-to-top{bottom:calc(12px + env(safe-area-inset-bottom));font-size:12px;padding:10px 12px}}
 
 /* Viewport controls align with the content edge, never beyond the page. */
 .page-scroll-progress{position:fixed;right:var(--scroll-control-right,4%);top:50%;transform:translateY(-50%);width:6px;height:120px;max-height:30vh;z-index:6;background:#dce7e0;border-radius:4px;overflow:hidden;pointer-events:none}
 .page-scroll-progress[hidden]{display:none}
 .page-scroll-progress>span{display:block;width:100%;height:0;background:var(--teal);border-radius:4px}
+
+/* Pin the seller-count bar outside containment, in both scroll directions. */
+.results-tools.is-pinned{position:fixed;top:8px;margin:0}
+body:has(dialog[open]) .results-tools.is-pinned{visibility:hidden}
+
+.results-tools.is-pinned .results-progress,.results-tools.is-pinned .results-search-progress{min-width:0;overflow-wrap:anywhere}

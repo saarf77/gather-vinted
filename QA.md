@@ -96,3 +96,12 @@ Browser checks used real results and 48 displayed sellers:
 - Review corrected positioning for narrower visual viewports and added immediate progress refresh for expanded details. Pinch zoom was reviewed in code; browser UI did not provide a pinch-zoom test.
 
 Validation: 82 Node tests, build, JavaScript syntax check, diff whitespace check and code review. Proof screenshots are in ignored artifacts/.
+
+
+## Follow-up: pin the seller-count bar in both directions
+
+The clarified report concerns the horizontal seller-count bar (e.g. 72 of 630 sellers), distinct from the added vertical scroll rail. Its CSS sticky positioning was replaced with explicit fixed positioning after reaching its original position. A placeholder preserves grid position while the original bar moves outside the results containment to the document body. Above that position it returns to its normal location; empty results hide it, and dialogs suppress the pinned bar.
+
+Real-search verification: with 72 of 196 sellers displayed at 1265 × 950, downward scroll positions 11,013, 12,913 and 16,221 px kept the bar fixed at top 8 px; scrolling up to 13,371 px retained the same position. At 390 × 844 it stayed at top 6 px, updated to 96 and then 120 displayed sellers, and translated into German without horizontal overflow. The placeholder matched its 51 px desktop / 49 px mobile height. Back to top restored the bar to its original location.
+
+Validation: 82 Node tests, build, syntax check, diff whitespace check and code review. The reviewer also checked narrow viewport sizing; progress children can shrink within the pinned toolbar.

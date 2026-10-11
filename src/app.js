@@ -239,6 +239,28 @@ function updateScrollControls(){
  const viewportRight=Math.min(root.clientWidth,(view?.offsetLeft??0)+(view?.width??root.clientWidth));
  const contentRight=main.getBoundingClientRect().right-parseFloat(getComputedStyle(main).paddingRight);
  root.style.setProperty('--scroll-control-right',`${Math.max(12,root.clientWidth-Math.min(contentRight,viewportRight-12))}px`);
+ const tools=$('#results-tools'),slot=$('#results-tools-slot');
+ slot.hidden=tools.hidden;
+ const slotBounds=slot.getBoundingClientRect();
+ const top=(view?.offsetTop??0)+(window.innerWidth<=740?6:8);
+ const pin=!tools.hidden&&slotBounds.top<=top;
+ if(pin){
+  // Keep a placeholder so moving the bar to the viewport cannot shift results.
+  slot.style.minHeight=`${tools.getBoundingClientRect().height}px`;
+  if(tools.parentElement!==document.body)document.body.append(tools);
+  tools.classList.add('is-pinned');
+  const leftEdge=(view?.offsetLeft??0)+12;
+  const width=Math.max(0,Math.min(slotBounds.width,viewportRight-leftEdge-12));
+  const left=Math.max(leftEdge,Math.min(slotBounds.left,viewportRight-width-12));
+  tools.style.left=`${left}px`;tools.style.width=`${width}px`;tools.style.top=`${top}px`;
+  slot.style.minHeight=`${tools.getBoundingClientRect().height}px`;
+ }else{
+  if(tools.parentElement!==slot)slot.append(tools);
+  tools.classList.remove('is-pinned');
+  tools.style.removeProperty('left');tools.style.removeProperty('width');tools.style.removeProperty('top');
+  slot.style.removeProperty('min-height');
+ }
+
  $('#back-to-top').hidden=window.scrollY<600;
  const progress=$('#page-scroll-progress'),range=root.scrollHeight-window.innerHeight;
  const percent=range>0?Math.max(0,Math.min(100,window.scrollY/range*100)):0;
