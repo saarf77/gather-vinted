@@ -8,10 +8,11 @@ No Vinted account, API key, paid provider, proxy or browser extension is require
 
 ## Use
 
-1. Add your items, maximum prices and optional filters.
-2. Choose 1, 3 or 5 search pages per item (30 pages total maximum).
-3. Click **Find real bundles**. Results default to sellers matching two or more requests.
-4. Open the item links to check availability and create a bundle on Vinted.
+1. Optionally set **List preferences** once: department, clothing sizes and minimum condition.
+2. Add items with name, size and maximum price. **More filters** contains brand, department, searchable category and condition. Own filters override list defaults; disable **Use list preferences** for fully independent item filters. Shoe, hat and sock sizes remain separate.
+3. Choose **Quick search** (1 page per item) or **Broader search** (up to 3), beside the shopping list. Results default to sellers matching two or more requests.
+4. Use **Search more** to expand towards 5 pages per item, within 30 pages total. It re-runs the broader range and replaces results. Cancellation or failure preserves prior successful results.
+5. Open item links from bundle cards to check availability and buy on Vinted. Cards lead with matched item names and item subtotal; fetched counts and missing items appear in details.
 
 Each listing can satisfy only one request. Sellers are ranked by items covered, then minimum item subtotal. Shipping, buyer protection and bundle discounts are confirmed on Vinted.
 
@@ -25,10 +26,10 @@ Search always uses **Vinted Germany**, EUR and its size IDs. German keywords are
 
 Filter IDs and German labels were checked against Vinted Germany’s public catalogue and visible filter menus on 2026-10-11. The snapshot is in `src/filter-options.js`.
 
-- **Department:** Damen, Herren, Kinder. Multiple choices allowed; unchecked means any.
-- **Category:** Vinted’s category tree within those departments. A specific category narrows the search instead of widening it with the parent department.
-- **Size:** Kinder opens baby/kids clothing sizes automatically: preemie and 44–176, plus one size and letter sizes. Children’s clothing sizes show the number first, with the age alongside. Shoes, hats and socks have their own menus. Select multiple sizes, grouped by department and item type (clothing, hats, socks, shoes, etc.). Uses actual Vinted size IDs, without guessing conversions between clothing systems.
-- **Condition:** Neu, mit Etikett; Neu; Sehr gut; Gut; Zufriedenstellend. Multiple choices allowed; unchecked means any.
+- **Department:** Damen, Herren, Kinder. Multiple choices allowed; unchecked uses the list preference when enabled, otherwise any.
+- **Category:** Search Vinted’s category tree in English or German within those departments. A specific category narrows the search instead of widening it with the parent department.
+- **Size:** With Kinder selected, baby/kids clothing sizes are readily available: preemie and 44–176, plus one size and letter sizes. Children’s clothing sizes show the number first, with the age alongside. Shoes, hats and socks have their own menus. Select multiple sizes, grouped by department and item type (clothing, hats, socks, shoes, etc.). Uses actual Vinted size IDs, without guessing conversions between clothing systems.
+- **Condition:** Neu, mit Etikett; Neu; Sehr gut; Gut; Zufriedenstellend. Multiple choices allowed; unchecked uses the list preference when enabled, otherwise any.
 - **Brand:** Suggestions use verified Vinted brand IDs. Other typed brands use exact, case-insensitive matching on the fetched listings; this can miss listings outside those pages.
 - **Price:** Maximum item price in EUR.
 
@@ -44,7 +45,7 @@ This unofficial tool reads listing data embedded in public Vinted catalogue HTML
 
 ## Privacy and credentials
 
-Shopping lists stay in your browser’s localStorage. Search keywords and filters are sent to the app server and Vinted. Live results are not saved between reloads. Item photos load from Vinted; fonts load from Google Fonts. The app does not need or store Vinted or GitHub credentials.
+Shopping lists, list preferences and language choice stay in your browser’s localStorage. Search keywords and filters are sent to the app server and Vinted. Live results are not saved between reloads. Item photos load from Vinted; fonts load from Google Fonts. The app does not need or store Vinted or GitHub credentials.
 
 `.env*`, `.vercel/`, `node_modules/`, generated output and local test artifacts are excluded from Git. Hosting and GitHub credentials remain in the developer’s local authentication tools, outside this repository. Never commit credentials; use Vercel environment settings for any future server-only secret.
 
@@ -79,7 +80,7 @@ node --check src/app.js
 node --check api/search.mjs
 ```
 
-Unit tests cover matching, assignment, parsing, constraints, filter query parameters, query evidence, message-key parity, filter translations and English-to-German item names. `tests/browser-smoke.cjs` is an optional integration suite requiring Playwright and installed Chrome. Run it against the local server; live results change over time.
+Unit tests cover matching, assignment, parsing, constraints, filter query parameters, query evidence, message-key parity, filter translations, preference inheritance/overrides, separate accessory sizes, department compatibility, bilingual category search, bounded search depth and English-to-German item names. `tests/browser-smoke.cjs` is an optional integration suite requiring Playwright and installed Chrome. Run it against the local server; live results change over time.
 
 ## Import
 

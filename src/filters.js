@@ -10,6 +10,8 @@ export function validateFilters(entry){
  }
  for(const [key,choices] of [['categoryId',filterOptions.categories],['brandId',filterOptions.brands]])if(entry[key]!=null&&!choices.some(o=>o.id===entry[key]))throw new Error('Invalid Vinted filter selection.');
  if(entry.categoryId && entry.departmentIds?.length && !entry.departmentIds.includes(filterOptions.categories.find(c=>c.id===entry.categoryId).departmentId))throw new Error('Category does not belong to the selected department.');
+ const departments=entry.categoryId?[filterOptions.categories.find(c=>c.id===entry.categoryId).departmentId]:entry.departmentIds??[];
+ if(departments.length&&(entry.sizeIds??[]).some(id=>!departments.includes(filterOptions.sizes.find(s=>s.id===id).departmentId)))throw new Error('Size does not belong to the selected department. Clear the size selection or choose a matching department.');
 }
 export function appendFilters(url,entry){
  validateFilters(entry);

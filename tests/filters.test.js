@@ -40,3 +40,7 @@ test('a filtered result cannot satisfy another department or a changed size requ
 test('duplicate entry IDs cannot mix filter evidence across requests',async()=>{
  await assert.rejects(()=>searchVinted([{id:'a',keyword:'scarf'},{id:'a',keyword:'beanie'}],{fetchPage:async()=>html}),/unique/);
 });
+test('native sizes cannot be sent for a different effective department',()=>{
+ assert.throws(()=>validateFilters({departmentIds:[5],sizeIds:[623]}),/Size does not belong/);
+ assert.throws(()=>validateFilters({departmentIds:[1904,1193],categoryId:183,sizeIds:[623]}));
+});
