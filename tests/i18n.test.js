@@ -39,3 +39,8 @@ test('server and import errors use the selected interface language',()=>{
   assert.match(localizeError('Vinted returned HTTP 403. Search stopped; no paid service or access bypass was used.'),/HTTP 403/);
  }finally{setLanguage('en');}
 });
+test('sock sizes use verified adult letters and explicit EU foot ranges for kids',()=>{
+ for(const [id,label] of [[1519,'L · 43–46'],[1520,'XL · 47–51'],[1522,'XS · 36–37'],[1523,'S · 38–42'],[1525,'L · 47–52']])assert.equal(optionLabel('size',filterOptions.sizes.find(s=>s.id===id),'en'),label);
+ assert.equal(optionLabel('size',filterOptions.sizes.find(s=>s.id===1509),'en'),'EU 19–21');
+ assert.equal(optionLabel('size',filterOptions.sizes.find(s=>s.id===1509),'de'),'EU 19–21');
+});

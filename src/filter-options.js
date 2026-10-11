@@ -5807,6 +5807,18 @@ export const filterOptions = {
   },
   {
    "group": "Socken für Damen",
+   "id": 1519,
+   "label": "L | 43–46",
+   "departmentId": 1904
+  },
+  {
+   "group": "Socken für Damen",
+   "id": 1520,
+   "label": "XL | 47–51",
+   "departmentId": 1904
+  },
+  {
+   "group": "Socken für Damen",
    "id": 1521,
    "label": "Einheitsgröße",
    "departmentId": 1904
@@ -6587,8 +6599,26 @@ export const filterOptions = {
   },
   {
    "group": "Socken für Herren",
+   "id": 1522,
+   "label": "XS | 36–37",
+   "departmentId": 5
+  },
+  {
+   "group": "Socken für Herren",
+   "id": 1523,
+   "label": "S | 38–42",
+   "departmentId": 5
+  },
+  {
+   "group": "Socken für Herren",
    "id": 1524,
    "label": "M | 43–46",
+   "departmentId": 5
+  },
+  {
+   "group": "Socken für Herren",
+   "id": 1525,
+   "label": "L | 47–52",
    "departmentId": 5
   },
   {

@@ -89,3 +89,5 @@ Unit tests cover matching, assignment, parsing, constraints, filter query parame
 ```json
 [{"id":"1","sellerId":"seller-1","sellerName":"Anna","title":"Wool scarf","size":"One size","condition":"Sehr gut","price":8,"currency":"EUR"}]
 ```
+
+Category filters use searchable checkboxes: select one or more acceptable Vinted categories, or leave empty for any category. Existing single-category selections remain compatible. Sock sizes stay aligned with Vinted: children use EU foot-size ranges, while adults use Vinted’s department-specific letters and foot ranges. Age labels belong to children’s clothing sizes; no age-to-foot conversion is assumed.

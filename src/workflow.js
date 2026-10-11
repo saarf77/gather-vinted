@@ -1,4 +1,4 @@
-import {filterOptions,validateFilters} from './filters.js';
+import {filterOptions,validateFilters,categoryIds} from './filters.js';
 import {englishCategories} from './filter-translations.js';
 const clothingGroups={1904:'Kleidergrößen',5:'Größen Männer',1193:'Baby- und Kindergrößen'};
 export const defaultPreferences=()=>({departmentId:null,sizeIds:[],conditionIds:[]});
@@ -9,14 +9,23 @@ export function validatePreferences(value){
  if(!Array.isArray(value.sizeIds)||!Array.isArray(value.conditionIds)||value.sizeIds.some(id=>!preferenceSizes(value.departmentId).some(o=>o.id===id)))throw new Error('Invalid Vinted filter selection.');
 }
 export function sizingType(entry){
- const chosenCategory=filterOptions.categories.find(o=>o.id===entry.categoryId);
- const category=chosenCategory?.label.toLocaleLowerCase('de')??'';
- if(chosenCategory&&chosenCategory.id!==chosenCategory.departmentId){
-  if(/schuhe|stiefel|sandalen/.test(category))return 'shoes';
-  if(/mützen|hüte/.test(category))return 'hats';
-  if(/socken/.test(category))return 'socks';
-  if(/accessoires/.test(category))return 'other';
-  return /kleidung/.test(category)?'clothing':'other';
+ const chosen=categoryIds(entry).map(id=>filterOptions.categories.find(o=>o.id===id)).filter(o=>o&&o.id!==o.departmentId);
+ const category='';
+ if(chosen.length){
+  const types=chosen.map(o=>{
+   const path=o.label.toLocaleLowerCase('de');
+   if(/schuhe|stiefel|sandalen/.test(path))return 'shoes';
+   if(/mützen|hüte/.test(path))return 'hats';
+   // Only leaf sock categories; an underwear parent also includes clothing.
+   if(/\/ socken$/.test(path))return 'socks';
+   if(/accessoires/.test(path))return 'other';
+   return /kleidung/.test(path)||/clothing/i.test(englishCategories[o.id]??'')?'clothing':'other';
+  });
+  if(types.every(type=>type==='clothing')&&chosen.some(parent=>filterOptions.categories.some(child=>child.label.startsWith(parent.label+' / ')))){
+   const keywordType=sizingType({...entry,categoryIds:[],categoryId:null});
+   if(keywordType!=='clothing')return keywordType;
+  }
+  return types.every(type=>type===types[0])?types[0]:'other';
  }
  const keyword=entry.keyword.toLocaleLowerCase('de');
  if(/schuhe|stiefel|sandalen/.test(category)||/\bshoes?\b|schuh|\bboots?\b|stiefel|sandal|slipper|hausschuh|sneaker/.test(keyword))return 'shoes';
@@ -28,9 +37,9 @@ export function sizingType(entry){
 }
 export function resolveEntry(entry,preferences){
  if(entry.useListPreferences===false)return {...entry};
- const category=filterOptions.categories.find(o=>o.id===entry.categoryId);
+ const categoryDepartments=[...new Set(categoryIds(entry).map(id=>filterOptions.categories.find(o=>o.id===id)?.departmentId).filter(Boolean))];
  const sizeDepartments=[...new Set((entry.sizeIds??[]).map(id=>filterOptions.sizes.find(o=>o.id===id)?.departmentId).filter(Boolean))];
- const departmentIds=entry.departmentIds?.length?[...entry.departmentIds]:category?[category.departmentId]:sizeDepartments.length?sizeDepartments:preferences.departmentId?[preferences.departmentId]:[];
+ const departmentIds=entry.departmentIds?.length?[...entry.departmentIds]:categoryDepartments.length?categoryDepartments:sizeDepartments.length?sizeDepartments:preferences.departmentId?[preferences.departmentId]:[];
  const inheritSize=!entry.sizeIds?.length&&!entry.sizes?.length&&sizingType(entry)==='clothing'&&departmentIds.length===1&&departmentIds[0]===preferences.departmentId;
  const sizeIds=entry.sizeIds?.length?[...entry.sizeIds]:inheritSize?[...preferences.sizeIds]:[];
  return {...entry,departmentIds,sizeIds,sizes:sizeIds.length?sizeIds.map(id=>filterOptions.sizes.find(o=>o.id===id)?.label).filter(Boolean):[...(entry.sizes??[])],conditionIds:entry.conditionIds?.length?[...entry.conditionIds]:[...preferences.conditionIds]};

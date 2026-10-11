@@ -1,5 +1,5 @@
 import {language,t,setLanguage,translateDocument,optionLabel,localizeError} from './i18n.js';
-import {filterOptions,validateFilters} from './filters.js';
+import {filterOptions,validateFilters,categoryIds} from './filters.js';
 import {rankSellers} from './matching.js';
 import {initialEntries,validateListings,safeListingUrl} from './data.js';
 import {defaultPreferences,validatePreferences,preferenceSizes,resolveEntry,sizingType,searchCategories,searchPages,nextSearchPages} from './workflow.js';
@@ -10,13 +10,13 @@ const KEY='gather.workspace.v1';
 const freshEntries=()=>structuredClone(initialEntries).map(e=>({...e,sizes:[],useListPreferences:true}));
 let entries=freshEntries(),listings=[],preferences=defaultPreferences(),source='live',filter='multi';
 let editId=null,searching=false,searchController=null,statusMessage=null,lastSearchPages=0,storageProblem=false;
-let selectedSizeIds=new Set(),legacySizes=[],selectedCategory=null,preferenceSizeIds=new Set();
+let selectedSizeIds=new Set(),legacySizes=[],selectedCategoryIds=new Set(),preferenceSizeIds=new Set();
 const conditionSets={'':[],6:[6],1:[6,1],2:[6,1,2],3:[6,1,2,3],4:[6,1,2,3,4]};
 try{
  const saved=JSON.parse(localStorage.getItem(KEY)??'null');
  if(saved){
   if(!Array.isArray(saved.entries)||saved.entries.length>10||!saved.entries.every(e=>e&&typeof e.id==='string'&&typeof e.keyword==='string'&&e.keyword.trim()&&e.keyword.length<=80&&Array.isArray(e.sizes)&&e.sizes.every(s=>typeof s==='string')&&typeof e.brand==='string'&&typeof e.category==='string'&&(e.maxPrice===null||(Number.isFinite(e.maxPrice)&&e.maxPrice>=0&&e.maxPrice<=100000))&&(e.useListPreferences===undefined||typeof e.useListPreferences==='boolean'))||new Set(saved.entries.map(e=>e.id)).size!==saved.entries.length)throw new Error();
-  entries=saved.entries.map(e=>({...e,category:'',departmentIds:e.departmentIds??[],sizeIds:e.sizeIds??[],conditionIds:e.conditionIds??[],categoryId:e.categoryId??null,brandId:e.brandId??null}));
+  entries=saved.entries.map(e=>({...e,category:'',departmentIds:e.departmentIds??[],sizeIds:e.sizeIds??[],conditionIds:e.conditionIds??[],categoryIds:categoryIds(e),categoryId:null,brandId:e.brandId??null}));
   entries.forEach(validateFilters);preferences=saved.preferences??defaultPreferences();validatePreferences(preferences);
   source=['import','empty','live'].includes(saved.source)?saved.source:'live';listings=source==='import'?validateListings(saved.listings):[];
  }
@@ -62,7 +62,7 @@ function render(){
  $('#preferences-button').textContent=t(preferences.departmentId||preferences.conditionIds.length?'preferences.change':'preferences.edit');
  $('#preferences-summary').textContent=preferenceSummary();
  $('#live-search').textContent=t(searching?'search.cancel':'search.button');$('#search-pages').disabled=searching;
- $('#entries').innerHTML=resolved.map(e=>`<article class="entry"><div class="entry-head"><span class="entry-icon">${art(kindFor(e.keyword))}</span><h3>${escape(e.keyword)}</h3><div class="entry-controls"><button class="small-button edit-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.edit',{item:e.keyword}))}">✎</button><button class="small-button remove-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.remove',{item:e.keyword}))}">×</button></div></div><p class="entry-info">${escape(entrySizeLabels(e).length?entrySizeLabels(e).join(', '):t('filters.anySize'))} · ${escape(e.maxPrice===null?t('filters.anyPrice'):t('filters.upTo',{price:money(e.maxPrice)}))}${e.brand?`<br>${escape(e.brand)}`:''}${e.departmentIds?.length?`<br>${e.departmentIds.map(id=>escape(departmentName(id))).join(', ')}`:''}${e.categoryId?` · ${escape(label('category',e.categoryId).split(' / ').at(-1))}`:''}${e.conditionIds?.length?` · ${escape(conditionSummary(e.conditionIds))}`:''}</p></article>`).join('')||`<p class="muted">${t('items.start')}</p>`;
+ $('#entries').innerHTML=resolved.map(e=>`<article class="entry"><div class="entry-head"><span class="entry-icon">${art(kindFor(e.keyword))}</span><h3>${escape(e.keyword)}</h3><div class="entry-controls"><button class="small-button edit-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.edit',{item:e.keyword}))}">✎</button><button class="small-button remove-entry" data-id="${escape(e.id)}" ${searching?'disabled':''} aria-label="${escape(t('items.remove',{item:e.keyword}))}">×</button></div></div><p class="entry-info">${escape(entrySizeLabels(e).length?entrySizeLabels(e).join(', '):t('filters.anySize'))} · ${escape(e.maxPrice===null?t('filters.anyPrice'):t('filters.upTo',{price:money(e.maxPrice)}))}${e.brand?`<br>${escape(e.brand)}`:''}${e.departmentIds?.length?`<br>${e.departmentIds.map(id=>escape(departmentName(id))).join(', ')}`:''}${categoryIds(e).length?` · ${escape([...new Set(categoryIds(e).map(id=>label('category',id).split(' / ').at(-1)))].join(', '))}`:''}${e.conditionIds?.length?` · ${escape(conditionSummary(e.conditionIds))}`:''}</p></article>`).join('')||`<p class="muted">${t('items.start')}</p>`;
  $('#source-label').innerHTML=source==='live'?`<strong>${t('source.live')}</strong> · ${t(listings.length?'source.fetched':'source.ready',{count:listings.length})}`:source==='empty'?`<strong>${t('source.empty')}</strong> · ${t('source.importHelp')}`:`<strong>${t('source.import')}</strong> · ${t('source.importCount',{count:listings.length})}`;
  $('#multi-count').textContent=ranked.filter(r=>r.covered>=2).length;$('#all-count').textContent=ranked.length;$('#full-count').textContent=complete.length;
  for(const [id,value] of [['all-filter','all'],['multi-filter','multi'],['full-filter','full']]){$('#'+id).classList.toggle('active',filter===value);$('#'+id).setAttribute('aria-pressed',String(filter===value));}
@@ -84,14 +84,15 @@ function checkOptions(target,type,checked=[]){
  $(target).innerHTML=options.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${checked.includes(o.id)?'checked':''}>${escape(optionLabel(type,o))}</label>`).join('');
 }
 const checkedValues=selector=>[...document.querySelectorAll(`${selector} input:checked`)].map(n=>Number(n.value));
-function itemDraft(){return {id:editId??'draft',keyword:$('#keyword').value,sizes:legacySizes,sizeIds:[...selectedSizeIds],departmentIds:checkedValues('#department-options'),conditionIds:checkedValues('#condition-options'),categoryId:selectedCategory,useListPreferences:$('#use-preferences').checked};}
+function itemDraft(){return {id:editId??'draft',keyword:$('#keyword').value,sizes:legacySizes,sizeIds:[...selectedSizeIds],departmentIds:checkedValues('#department-options'),conditionIds:checkedValues('#condition-options'),categoryIds:[...selectedCategoryIds],useListPreferences:$('#use-preferences').checked};}
 const draftResolved=()=>resolveEntry(itemDraft(),preferences);
 const sizeChoices=()=>{const departments=draftResolved().departmentIds;return filterOptions.sizes.filter(o=>!departments.length||departments.includes(o.departmentId));};
 function updateSizeSummary(){
  const raw=itemDraft(),resolved=resolveEntry(raw,preferences),labels=entrySizeLabels(resolved);
  $('#size-summary').textContent=labels.length?t(!raw.sizeIds.length&&!raw.sizes.length?'preferences.inheritedSize':'filters.sizes',{sizes:labels.join(', ')}):t('filters.anySize');
  if(raw.sizeIds.length||raw.sizes.length)$('#size-summary').textContent=labels.join(', ');
- $('#item-size-hint').textContent=sizingType(raw)!=='clothing'?t('preferences.specialSize'):'';
+ const sockGroup=$('#size-group').value.split(':').slice(1).join(':').startsWith('Socken für');
+ $('#item-size-hint').textContent=sockGroup?t($('#size-group').value.startsWith('1193:')?'filters.kidsSocksHint':'filters.adultSocksHint'):sizingType(raw)!=='clothing'?t('preferences.specialSize'):'';
 }
 function renderSizeChoices(){
  const choices=sizeChoices().filter(o=>`${o.departmentId}:${o.group}`===$('#size-group').value);
@@ -99,14 +100,17 @@ function renderSizeChoices(){
  updateSizeSummary();
 }
 function renderCategories(){
- const departments=draftResolved().departmentIds,choices=searchCategories($('#category-search').value,departments);
- // A chosen ID survives text narrowing even when it is not among the visible matches.
- const selected=filterOptions.categories.find(o=>o.id===selectedCategory);
- const options=selected&&!choices.some(o=>o.id===selectedCategory)?[selected,...choices]:choices;
- $('#category').innerHTML=`<option value="">${t('filters.anyCategory')}</option>`+options.map(c=>`<option value="${c.id}">${escape(optionLabel('category',c))}</option>`).join('');
- $('#category').value=selectedCategory??'';
+ const raw=itemDraft(),departments=raw.departmentIds.length?raw.departmentIds:raw.useListPreferences&&preferences.departmentId?[preferences.departmentId]:[];
+ const choices=searchCategories($('#category-search').value,departments);
+ const selected=filterOptions.categories.filter(o=>selectedCategoryIds.has(o.id));
+ // Keep selected categories visible even when the query or department changes.
+ const options=[...selected,...choices.filter(o=>!selectedCategoryIds.has(o.id))];
+ $('#category-options').innerHTML=options.map(c=>`<label class="check-option category-option"><input type="checkbox" value="${c.id}" ${selectedCategoryIds.has(c.id)?'checked':''}><span>${escape(optionLabel('category',c))}</span></label>`).join('');
+ $('#category-summary').textContent=selected.length===1?optionLabel('category',selected[0]).split(' / ').at(-1):t(selected.length?'filters.categoriesSelected':'filters.anyCategory',{count:selected.length});
  $('#category-count').textContent=t(choices.length?'filters.categoryCount':'filters.noCategories',{count:choices.length});
+ $('#clear-categories').disabled=!selected.length;
 }
+
 function updateFilterMenus(preferredGroup='',resetGroup=false){
  renderCategories();
  $('#department-default-hint').textContent=t($('#use-preferences').checked&&preferences.departmentId?'filters.emptyDefault':'filters.anyUnchecked');
@@ -130,13 +134,14 @@ $('#department-options').addEventListener('change',()=>updateFilterMenus());
 $('#use-preferences').addEventListener('change',()=>updateFilterMenus());
 $('#keyword').addEventListener('input',()=>updateFilterMenus('',!selectedSizeIds.size&&!legacySizes.length));
 $('#category-search').addEventListener('input',renderCategories);
-$('#category').addEventListener('change',()=>{selectedCategory=$('#category').value?Number($('#category').value):null;updateFilterMenus();});
+$('#category-options').addEventListener('change',event=>{const id=Number(event.target.value);event.target.checked?selectedCategoryIds.add(id):selectedCategoryIds.delete(id);updateFilterMenus('',!selectedSizeIds.size&&!legacySizes.length);});
+$('#clear-categories').addEventListener('click',()=>{selectedCategoryIds.clear();updateFilterMenus('',!selectedSizeIds.size&&!legacySizes.length);});
 $('#size-group').addEventListener('change',renderSizeChoices);
-$('#size-options').addEventListener('change',event=>{legacySizes=[];const id=Number(event.target.value);event.target.checked?selectedSizeIds.add(id):selectedSizeIds.delete(id);updateSizeSummary();});
-$('#clear-sizes').addEventListener('click',()=>{selectedSizeIds.clear();legacySizes=[];renderSizeChoices();});
+$('#size-options').addEventListener('change',event=>{legacySizes=[];const id=Number(event.target.value);event.target.checked?selectedSizeIds.add(id):selectedSizeIds.delete(id);if(selectedSizeIds.size)updateSizeSummary();else updateFilterMenus();});
+$('#clear-sizes').addEventListener('click',()=>{selectedSizeIds.clear();legacySizes=[];updateFilterMenus();});
 function openItem(id=null){
- if(searching)return;editId=id;$('#item-form').reset();$('#size-picker').open=false;$('#more-filters').open=false;$('#item-error').textContent='';$('#item-dialog-title').textContent=t(id?'editor.edit':'editor.add');
- const entry=entries.find(e=>e.id===id);selectedSizeIds=new Set(entry?.sizeIds??[]);legacySizes=selectedSizeIds.size?[]:entry?.sizes??[];selectedCategory=entry?.categoryId??null;
+ if(searching)return;editId=id;$('#item-form').reset();$('#size-picker').open=false;$('#more-filters').open=false;$('#category-picker').open=false;$('#item-error').textContent='';$('#item-dialog-title').textContent=t(id?'editor.edit':'editor.add');
+ const entry=entries.find(e=>e.id===id);selectedSizeIds=new Set(entry?.sizeIds??[]);legacySizes=selectedSizeIds.size?[]:entry?.sizes??[];selectedCategoryIds=new Set(entry?categoryIds(entry):[]);
  if(entry){$('#keyword').value=entry.keyword;$('#max-price').value=entry.maxPrice??'';$('#brand').value=entry.brand;}
  $('#use-preferences').checked=entry?.useListPreferences!==false;
  checkOptions('#department-options','department',entry?.departmentIds);checkOptions('#condition-options','condition',entry?.conditionIds);

@@ -44,3 +44,14 @@ test('native sizes cannot be sent for a different effective department',()=>{
  assert.throws(()=>validateFilters({departmentIds:[5],sizeIds:[623]}),/Size does not belong/);
  assert.throws(()=>validateFilters({departmentIds:[1904,1193],categoryId:183,sizeIds:[623]}));
 });
+test('multiple categories narrow the catalogue and preserve their complete evidence',async()=>{
+ const entry={id:'sock',keyword:'socks',departmentIds:[1193],categoryIds:[1757,1600]};
+ assert.deepEqual(catalogIds(entry),[1757,1600]);
+ assert.notEqual(filterKey(entry),filterKey({...entry,categoryIds:[1757]}));
+ let url;const result=await searchVinted([entry],{pages:1,fetchPage:async value=>{url=new URL(value);return html;}});
+ assert.deepEqual(url.searchParams.getAll('catalog[]'),['1757','1600']);
+ assert.equal(result.listings[0].filterEvidence.sock,filterKey(entry));
+});
+test('category arrays reject unknown IDs, invalid shapes and incompatible departments',()=>{
+ for(const entry of [{categoryIds:[999999]},{categoryIds:'1600'},{categoryIds:[1600],departmentIds:[5]},{categoryIds:[183],sizeIds:[623]}])assert.throws(()=>validateFilters(entry));
+});

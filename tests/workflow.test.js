@@ -50,3 +50,15 @@ test('keyword-only bootcut jeans still uses clothing sizes',async()=>{
  const size=filterOptions.sizes.find(o=>o.departmentId===1904&&o.group==='Kleidergrößen');
  assert.deepEqual(resolveEntry(item('Bootcut jeans'),{departmentId:1904,sizeIds:[size.id],conditionIds:[]}).sizeIds,[size.id]);
 });
+test('multiple native sock categories infer kids and never inherit clothing sizes',()=>{
+ const resolved=resolveEntry(item('socks',{categoryIds:[1600,1757]}),{departmentId:5,sizeIds:[],conditionIds:[]});
+ assert.deepEqual(resolved.departmentIds,[1193]);assert.deepEqual(resolved.sizeIds,[]);
+});
+test('mixed category size types never inherit a clothing default',()=>{
+ assert.deepEqual(resolveEntry(item('jacket',{categoryIds:[1521,1600]}),preferences).sizeIds,[]);
+});
+test('sock keywords in broad clothing parents keep clothing defaults separate',()=>{
+ for(const categoryIds of [[85],[1252],[85,1828]]){
+  assert.deepEqual(resolveEntry(item('Socks',{categoryIds}),{departmentId:categoryIds[0]===85?5:1193,sizeIds:[categoryIds[0]===85?206:619],conditionIds:[]}).sizeIds,[],String(categoryIds));
+ }
+});

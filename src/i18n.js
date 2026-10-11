@@ -30,6 +30,7 @@ export function optionLabel(type,option,locale=language){
  if(type==='category')return locale==='en'?englishCategories[option.id]??label:label;
  if(type==='condition')return locale==='en'?({6:'New with tags',1:'New without tags',2:'Very good',3:'Good',4:'Satisfactory'})[option.id]??label:label;
  if(type==='size'){
+  if(option.group?.startsWith('Socken für'))return option.departmentId===1193?`EU ${label}`:sizeText(label,locale).replace(' | ',' · ');
   if(option.departmentId===1193&&option.group==='Baby- und Kindergrößen'){
    const parts=label.split(' / ');
    if(parts.length===2&&/^\d+$/.test(parts[1]))return `${parts[1]} · ${sizeText(parts[0],locale)}`;
