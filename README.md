@@ -21,7 +21,7 @@ Filter IDs and German labels were checked against Vinted Germany’s public cata
 
 - **Department:** Damen, Herren, Kinder. Multiple choices allowed; unchecked means any.
 - **Category:** Vinted’s category tree within those departments. A specific category narrows the search instead of widening it with the parent department.
-- **Size:** Select multiple sizes, grouped by department and item type (clothing, hats, socks, shoes, etc.). Uses actual Vinted size IDs, without guessing conversions between clothing systems.
+- **Size:** Kinder opens baby/kids clothing sizes automatically: preemie and 44–176, plus one size and letter sizes. Children’s clothing sizes show the number first, with the age alongside. Shoes, hats and socks have their own menus. Select multiple sizes, grouped by department and item type (clothing, hats, socks, shoes, etc.). Uses actual Vinted size IDs, without guessing conversions between clothing systems.
 - **Condition:** Neu, mit Etikett; Neu; Sehr gut; Gut; Zufriedenstellend. Multiple choices allowed; unchecked means any.
 - **Brand:** Suggestions use verified Vinted brand IDs. Other typed brands use exact, case-insensitive matching on the fetched listings; this can miss listings outside those pages.
 - **Price:** Maximum item price in EUR.

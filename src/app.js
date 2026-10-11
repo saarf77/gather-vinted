@@ -30,10 +30,19 @@ const artPaths={
 };
 function kindFor(keyword){const k=keyword.toLowerCase();return /scarf|schal/.test(k)?'scarf':/sock/.test(k)?'socks':/beanie|mütze/.test(k)?'beanie':/jumper|sweater|pullover/.test(k)?'jumper':'generic';}
 function art(kind='generic',tone='oat'){return `<svg viewBox="0 0 100 110" aria-hidden="true" style="color:${({oat:'#baa585',sage:'#8b9b80',rust:'#b27c5e'})[tone]??'#baa585'}">${artPaths[kind]??artPaths.generic}</svg>`;}
+function sizeLabel(option){
+ if(option.departmentId===1193 && option.group==='Baby- und Kindergrößen'){
+  const parts=option.label.split(' / ');
+  if(parts.length===2 && /^\d+$/.test(parts[1]))return `${parts[1]} · ${parts[0]}`;
+  if(option.label==='Frühchen, bis 44')return 'Bis 44 · Frühchen';
+ }
+ return option.label;
+}
+function entrySizeLabels(entry){return entry.sizeIds?.length?[...new Set(entry.sizeIds.map(id=>filterOptions.sizes.find(o=>o.id===id)).filter(Boolean).map(sizeLabel))]:entry.sizes;}
 function render(){
  $('#list-count').textContent=`${entries.length} ${entries.length===1?'item':'items'}`;
  $('#add-button').disabled=searching||entries.length>=10;
- $('#entries').innerHTML=entries.map(e=>`<article class="entry"><div class="entry-head"><span class="entry-icon">${art(kindFor(e.keyword))}</span><h3>${escape(e.keyword)}</h3><div class="entry-controls"><button class="small-button edit-entry" data-id="${escape(e.id)}" aria-label="Edit ${escape(e.keyword)}">✎</button><button class="small-button remove-entry" data-id="${escape(e.id)}" aria-label="Remove ${escape(e.keyword)}">×</button></div></div><p class="entry-info">${escape(e.sizes.length?e.sizes.join(', '):'Any size')} · ${e.maxPrice===null?'Any price':`Up to ${money(e.maxPrice)}`}${e.brand?`<br>${escape(e.brand)}`:''}${e.departmentIds?.length?`<br>${e.departmentIds.map(id=>escape(departmentName(id))).join(', ')}`:''}${e.categoryId?` · ${escape(filterOptions.categories.find(o=>o.id===e.categoryId)?.label.split(' / ').at(-1))}`:''}${e.conditionIds?.length?`<br>${e.conditionIds.map(id=>escape(filterOptions.conditions.find(o=>o.id===id)?.label)).join(', ')}`:''}</p></article>`).join('') || '<p class="muted">Start with something you’re looking for.</p>';
+ $('#entries').innerHTML=entries.map(e=>`<article class="entry"><div class="entry-head"><span class="entry-icon">${art(kindFor(e.keyword))}</span><h3>${escape(e.keyword)}</h3><div class="entry-controls"><button class="small-button edit-entry" data-id="${escape(e.id)}" aria-label="Edit ${escape(e.keyword)}">✎</button><button class="small-button remove-entry" data-id="${escape(e.id)}" aria-label="Remove ${escape(e.keyword)}">×</button></div></div><p class="entry-info">${escape(entrySizeLabels(e).length?entrySizeLabels(e).join(', '):'Any size')} · ${e.maxPrice===null?'Any price':`Up to ${money(e.maxPrice)}`}${e.brand?`<br>${escape(e.brand)}`:''}${e.departmentIds?.length?`<br>${e.departmentIds.map(id=>escape(departmentName(id))).join(', ')}`:''}${e.categoryId?` · ${escape(filterOptions.categories.find(o=>o.id===e.categoryId)?.label.split(' / ').at(-1))}`:''}${e.conditionIds?.length?`<br>${e.conditionIds.map(id=>escape(filterOptions.conditions.find(o=>o.id===id)?.label)).join(', ')}`:''}</p></article>`).join('') || '<p class="muted">Start with something you’re looking for.</p>';
  $('#source-label').innerHTML=source==='live'?`<strong>Live Vinted · free</strong> · ${listings.length?listings.length+' real listings fetched. Limited to searched pages.':'Ready to search. No paid provider or API key.'}`:source==='demo'?'<strong>Demo workspace</strong> · Fictional listings to try the matching. No live Vinted search.':source==='empty'?'<strong>No listings loaded</strong> · Import a collection or restore the demo.':`<strong>Imported collection</strong> · ${listings.length} listings loaded. No live Vinted search.`;
  const ranked=rankSellers(entries,listings), complete=ranked.filter(r=>r.covered===entries.length);
  $('#multi-count').textContent=ranked.filter(r=>r.covered>=2).length;$('#all-count').textContent=ranked.length;$('#full-count').textContent=complete.length;
@@ -52,27 +61,32 @@ const departmentName=id=>filterOptions.departments.find(d=>d.id===id)?.label??''
 const chosenDepartments=()=>[...document.querySelectorAll('#department-options input:checked')].map(n=>Number(n.value));
 const sizeChoices=()=>filterOptions.sizes.filter(o=>!chosenDepartments().length||chosenDepartments().includes(o.departmentId));
 function updateSizeSummary(){
- const labels=[...new Set([...selectedSizeIds].map(id=>filterOptions.sizes.find(o=>o.id===id)?.label).filter(Boolean))];
+ const labels=[...new Set([...selectedSizeIds].map(id=>filterOptions.sizes.find(o=>o.id===id)).filter(Boolean).map(sizeLabel))];
  $('#size-summary').textContent=labels.length?labels.join(', '):legacySizes.length?legacySizes.join(', '):'Any size';
 }
 function renderSizeChoices(){
  const choices=sizeChoices().filter(o=>`${o.departmentId}:${o.group}`===$('#size-group').value);
- $('#size-options').innerHTML=choices.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${selectedSizeIds.has(o.id)?'checked':''}>${escape(o.label)}</label>`).join('');updateSizeSummary();
+ $('#size-options').innerHTML=choices.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${selectedSizeIds.has(o.id)?'checked':''}>${escape(sizeLabel(o))}</label>`).join('') || '<p class="muted">Choose a size type above. Baby and kids clothing sizes run from 44 to 176, with a separate preemie option.</p>';updateSizeSummary();
 }
 function updateFilterMenus(preferredGroup=''){
  const departments=chosenDepartments(),currentCategory=$('#category').value;
  $('#category').innerHTML='<option value="">Any category</option>'+filterOptions.departments.filter(d=>!departments.length||departments.includes(d.id)).map(d=>`<optgroup label="${escape(d.label)}">${filterOptions.categories.filter(c=>c.departmentId===d.id&&c.id!==d.id).map(c=>`<option value="${c.id}">${escape(c.label.replace(d.label+' / ',''))}</option>`).join('')}</optgroup>`).join('');
  if([...$('#category').options].some(o=>o.value===currentCategory))$('#category').value=currentCategory;
- const choices=sizeChoices(),groups=[...new Map(choices.map(o=>[`${o.departmentId}:${o.group}`,`${departmentName(o.departmentId)} · ${o.group}`])).entries()];
+ const choices=sizeChoices(),groups=[...new Map(choices.map(o=>[`${o.departmentId}:${o.group}`,`${departmentName(o.departmentId)} · ${o.group==='Baby- und Kindergrößen'?'Baby- & Kinderkleidung (44–176)':o.group}`])).entries()];
  const previous=preferredGroup||$('#size-group').value;
- $('#size-group').innerHTML=groups.map(([value,label])=>`<option value="${escape(value)}">${escape(label)}</option>`).join('');
+ $('#size-group').innerHTML='<option value="">Choose a size type</option>'+groups.map(([value,label])=>`<option value="${escape(value)}">${escape(label)}</option>`).join('');
  if(groups.some(([key])=>key===previous))$('#size-group').value=previous;
+ else if(departments.length===1)$('#size-group').value=({1904:'1904:Kleidergrößen',5:'5:Größen Männer',1193:'1193:Baby- und Kindergrößen'})[departments[0]];
  selectedSizeIds=new Set([...selectedSizeIds].filter(id=>choices.some(o=>o.id===id)));renderSizeChoices();
 }
 $('#department-options').innerHTML=filterOptions.departments.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}">${escape(o.label)}</label>`).join('');
 $('#condition-options').innerHTML=filterOptions.conditions.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}">${escape(o.label)}</label>`).join('');
 $('#brand-options').innerHTML=filterOptions.brands.map(o=>`<option value="${escape(o.label)}"></option>`).join('');
-$('#department-options').addEventListener('change',()=>updateFilterMenus());
+$('#department-options').addEventListener('change',event=>{
+ const kidsSelected=event.target.checked&&Number(event.target.value)===1193;
+ updateFilterMenus(kidsSelected?'1193:Baby- und Kindergrößen':'');
+ if(kidsSelected)$('#size-picker').open=true;
+});
 $('#size-group').addEventListener('change',renderSizeChoices);
 $('#size-options').addEventListener('change',event=>{legacySizes=[];const id=Number(event.target.value);event.target.checked?selectedSizeIds.add(id):selectedSizeIds.delete(id);updateSizeSummary();});
 $('#clear-sizes').addEventListener('click',()=>{selectedSizeIds.clear();legacySizes=[];renderSizeChoices();});
@@ -82,7 +96,7 @@ function openItem(id=null){
  if(e){$('#keyword').value=e.keyword;$('#max-price').value=e.maxPrice??'';$('#brand').value=e.brand;}
  for(const n of document.querySelectorAll('#department-options input'))n.checked=e?.departmentIds?.includes(Number(n.value))??false;
  for(const n of document.querySelectorAll('#condition-options input'))n.checked=e?.conditionIds?.includes(Number(n.value))??false;
- const selected=filterOptions.sizes.find(o=>selectedSizeIds.has(o.id));updateFilterMenus(selected?`${selected.departmentId}:${selected.group}`:'');$('#category').value=e?.categoryId??'';
+ $('#size-group').value='';const selected=filterOptions.sizes.find(o=>selectedSizeIds.has(o.id));updateFilterMenus(selected?`${selected.departmentId}:${selected.group}`:'');$('#category').value=e?.categoryId??'';
  $('#item-dialog').showModal();
 }
 $('#add-button').addEventListener('click',()=>openItem());
