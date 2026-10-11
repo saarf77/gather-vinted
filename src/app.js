@@ -3,6 +3,7 @@ import {filterOptions,validateFilters,categoryIds,sizeGroups} from './filters.js
 import {rankSellers,matches} from './matching.js';
 import {initialEntries,validateListings} from './data.js';
 import {renderProduct} from './product-card.js';
+import {createResultWindow,RESULT_BATCH_SIZE} from './result-window.js';
 import {defaultPreferences,validatePreferences,preferenceSizes,resolveEntry,sizingType,searchCategories,searchPages,nextSearchPages,categorySizes,compatibleSizeIds} from './workflow.js';
 const $=selector=>document.querySelector(selector);
 const escape=value=>String(value??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,6 +11,8 @@ const money=value=>new Intl.NumberFormat(language==='de'?'de-DE':'en-IE',{style:
 const KEY='gather.workspace.v1';
 const freshEntries=()=>structuredClone(initialEntries).map(e=>({...e,sizes:[],useListPreferences:true}));
 let entries=freshEntries(),listings=[],preferences=defaultPreferences(),source='live',filter='multi';
+const resultWindow=createResultWindow();
+let resultPage={items:[],shown:0,total:0,hasMore:false},bestSellerId=null;
 let editId=null,searching=false,searchController=null,statusMessage=null,lastSearchPages=0,storageProblem=false;
 let useListSizes=true,selectedSizeIds=new Set(),selectedSizeGroups=[],legacySizes=[],selectedCategoryIds=new Set(),preferenceSizeIds=new Set();
 const conditionSets={'':[],6:[6],1:[6,1],2:[6,1,2],3:[6,1,2,3],4:[6,1,2,3,4]};
@@ -25,7 +28,12 @@ try{
 const effectiveEntries=()=>entries.map(entry=>resolveEntry(entry,preferences));
 function toast(message){$('#toast').textContent=message;$('#toast').hidden=false;clearTimeout(toast.timer);toast.timer=setTimeout(()=>$('#toast').hidden=true,4200);}
 function persist(){try{localStorage.setItem(KEY,JSON.stringify({entries,preferences,source,listings:source==='import'?listings:[]}));}catch{toast(t('storage.unavailable'));}}
-function setStatus(key,params={}){statusMessage={key,params};$('#search-status').textContent=t(key,params.error?{...params,error:localizeError(params.error)}:params);}
+function setStatus(key,params={}){
+ statusMessage={key,params};$('#search-status').textContent=t(key,params.error?{...params,error:localizeError(params.error)}:params);
+ $('#search-progress-label').textContent=t(key==='search.progress'?'search.requestProgress':'search.loadingLabel',params);
+ if(key==='search.progress'){$('#search-progress').max=params.total;$('#search-progress').value=params.done;}
+ else $('#search-progress').removeAttribute('value');
+}
 function invalidateResults(){lastSearchPages=0;if(source==='live'){listings=[];setStatus('search.changed');}}
 const artPaths={
  scarf:'<path d="M33 13c0-5 7-7 11-5l17 8-8 20-12-5-2 61H19l9-63-7-7Z" fill="currentColor"/><path d="m47 27 16 7-4 57H42l5-64Z" fill="currentColor" opacity=".83"/><path d="M22 83h15m8 0h13M26 48h12m8 0h14M29 35h10" stroke="#fff" opacity=".3" stroke-width="3"/><path d="M20 91v6m7-6v6m7-6v6m11-6v6m6-6v6m6-6v6" stroke="currentColor" stroke-width="2"/>',
@@ -73,9 +81,15 @@ function render(){
  let visible=filter==='full'?complete:filter==='multi'?ranked.filter(r=>r.covered>=2):[...ranked];
  if($('#sort').value==='price')visible=[...visible].sort((a,b)=>a.subtotal-b.subtotal||b.covered-a.covered||a.sellerId.localeCompare(b.sellerId));
  $('#results-summary').textContent=t(entries.length?'results.summary':'results.first',{count:ranked.length,complete:complete.length});
+ $('#results').classList.toggle('has-single-matches',visible.some(result=>result.covered===1));
+ $('#results').classList.toggle('bundles-only',visible.length>0&&visible.every(result=>result.covered>1));
+ bestSellerId=ranked[0]?.sellerId??null;
+ resultPage=resultWindow.update(visible,[filter,$('#sort').value,entries,listings,preferences,source]);updateResultControls();
  if(!visible.length){const kind=!entries.length?'list':!listings.length?'ready':filter==='multi'?'multi':filter==='full'?'full':'none';$('#results').innerHTML=`<div class="empty"><span class="empty-symbol" aria-hidden="true">⌁</span><h3>${t(`empty.${kind}Title`)}</h3><p>${t(`empty.${kind}Body`,{count:ranked.length})}</p>${filter!=='all'&&listings.length?`<button class="secondary-button" id="empty-all">${t('empty.all')}</button>`:''}</div>`;return;}
- $('#results').innerHTML=visible.map(result=>{
-  const best=result===ranked[0]&&filter!=='full'&&$('#sort').value==='coverage';
+ $('#results').innerHTML=resultPage.items.map(renderSellerCard).join('');
+}
+function renderSellerCard(result){
+ const best=result.sellerId===bestSellerId&&filter!=='full'&&$('#sort').value==='coverage';
   const matched=result.selected.map(({entryIndex})=>entries[entryIndex].keyword).join(' + ');
   return `<article class="seller-card${result.covered===1?' single-match':' bundle-card'}${best?' best':''}">
    <div class="items-grid">${result.selected.map(({listing,entryIndex})=>renderProduct(listing,{keyword:entries[entryIndex].keyword,live:source==='live',money,conditionLabel,unknownSize:t('results.unknownSize'),viewLabel:t('results.vinted'),art})).join('')}</div>
@@ -84,8 +98,19 @@ function render(){
    <div class="seller-bottom"><span class="seller-name">${escape(sellerName(result))}</span><button class="bundle-toggle" data-seller="${escape(result.sellerId)}" aria-expanded="false">${t('results.details')} <span aria-hidden="true">⌄</span></button></div>
    <div class="bundle-detail" hidden><strong>${t(source==='live'?'results.liveDetail':'results.importDetail')}</strong><p>${t('results.loaded',{count:result.listingCount})}</p>${result.missing.length?`<p>${escape(t('results.missing',{items:result.missing.map(e=>e.keyword).join(', ')}))}</p>`:''}<ul>${result.selected.map(({entryIndex,listing})=>`<li>${escape(entries[entryIndex].keyword)} → ${escape(listing.title)} (${money(listing.price)})</li>`).join('')}</ul><p>${t('results.purchase')} ${t('results.excluded')}</p></div>
   </article>`;
- }).join('');
 }
+function updateResultControls(){
+ $('#results-tools').hidden=!searching&&!resultPage.total;
+ $('#results-search-progress').hidden=!searching;
+ $('#results-progress').hidden=!resultPage.total;
+ $('#results-shown').textContent=t('results.shown',resultPage);
+ $('#results-progress-bar').max=Math.max(1,resultPage.total);$('#results-progress-bar').value=resultPage.shown;
+ $('#load-results').hidden=!resultPage.total;
+ $('#results-page-summary').textContent=t(resultPage.hasMore?'results.shown':'results.allShown',resultPage);
+ $('#load-more-results').hidden=!resultPage.hasMore;$('#load-more-results').disabled=searching;
+ $('#load-more-results').textContent=t('results.loadMore',{count:Math.min(RESULT_BATCH_SIZE,resultPage.total-resultPage.shown)});
+}
+
 function checkOptions(target,type,checked=[]){
  const options=type==='department'?filterOptions.departments:filterOptions.conditions;
  $(target).innerHTML=options.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${checked.includes(o.id)?'checked':''}>${escape(optionLabel(type,o))}</label>`).join('');
@@ -199,6 +224,22 @@ $('#results').addEventListener('click',event=>{
  if(event.target.closest('#empty-all')){filter='all';render();}
  const button=event.target.closest('.bundle-toggle');if(button){const detail=button.closest('.seller-card').querySelector('.bundle-detail');detail.hidden=!detail.hidden;button.setAttribute('aria-expanded',String(!detail.hidden));button.innerHTML=`${t(detail.hidden?'results.details':'results.hide')} <span aria-hidden="true">${detail.hidden?'⌄':'⌃'}</span>`;}
 });
+$('#load-more-results').addEventListener('click',()=>{
+ if(searching||!resultPage.hasMore)return;
+ const shown=resultPage.shown;resultPage=resultWindow.more();
+ $('#results').insertAdjacentHTML('beforeend',resultPage.items.slice(shown).map(renderSellerCard).join(''));
+ updateResultControls();
+ const next=$('#results').querySelectorAll('.seller-card')[shown];
+ if(next){next.tabIndex=-1;next.focus({preventScroll:true});}
+});
+let scrollFrame=false;
+function updateBackToTop(){$('#back-to-top').hidden=window.scrollY<600;}
+window.addEventListener('scroll',()=>{if(scrollFrame)return;scrollFrame=true;requestAnimationFrame(()=>{updateBackToTop();scrollFrame=false;});},{passive:true});
+$('#back-to-top').addEventListener('click',()=>{
+ window.scrollTo({top:0,behavior:window.matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'});
+ $('.logo').focus({preventScroll:true});
+});
+updateBackToTop();
 $('#about-button').addEventListener('click',()=>$('#about-dialog').showModal());
 $('#import-button').addEventListener('click',()=>{if(searching)return;$('#import-error').textContent='';$('#import-file').value='';$('#import-dialog').showModal();});
 const example=[{id:'your-listing-id',sellerId:'your-seller-id',sellerName:'seller-name',title:'Wool scarf',size:'One size',price:8,currency:'EUR',brand:'',category:'accessories',condition:'Very good'}];

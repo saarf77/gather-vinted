@@ -70,3 +70,16 @@ Validation: 79 Node tests, JavaScript syntax checks and production build. Deskto
 The initial grid left each card at its natural height. A live desktop reproduction measured a 74.17 px difference between two cards in the first row. The grid now stretches cards to their row height, with a flexible product area keeping collapsed seller footers aligned. Photos retain their full-image aspect ratio and listing text is not clipped.
 
 Measured all multi-card rows after the fix: 69 rows at 1265 px desktop width, 103 rows at 1000 px tablet width and 102 rows at 390 px mobile width in German. Card-height differences and collapsed-footer bottom differences were 0 px. Details expansion/collapse remained usable and mobile had no horizontal overflow. Validation: 79 Node tests and production build.
+
+
+## Follow-up: results in batches
+
+A fresh real Quick search returned 197 matching sellers in All matches. The page initially rendered 24 seller cards; successive Load more actions reached 48 and then all 197, with 197 unique seller IDs and the final partial batch correctly exhausted. The button appends fetched results without another Vinted request. Photos use native lazy loading. Search more remains the separate action for additional catalogue pages.
+
+- Opening seller details and loading the next batch preserved both the existing cards and the expanded details. Keyboard focus moved to the first appended card without scrolling.
+- EN/DE changes retained the displayed 48 sellers and translated progress and counted Load more labels. Price sorting reset to 24. Short and empty filters hid unnecessary controls.
+- Search progress appeared during a real request. Browsing progress remained sticky on the right of results. At 390 × 844, neither language caused horizontal overflow and Load more/Back to top retained 44 px targets.
+- Back to top returned scroll position to zero, focused the home link and hid itself. Reduced-motion users receive an immediate scroll.
+- Sixteen multi-card desktop rows measured 0 px differences in card heights and collapsed footer alignment after appending. Grid layout is based on the full filtered collection so introducing a single-match seller in a later batch cannot resize preceding bundle cards.
+
+Validation: 82 Node tests, JavaScript syntax check, production build and code review. Counts are observations from this search snapshot.
