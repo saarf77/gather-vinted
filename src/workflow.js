@@ -32,7 +32,7 @@ export function sizingType(entry){
  if(/mützen|hüte/.test(category)||/beanie|mütze|muetze|\bhat\b|\bhut\b|bonnet|berretto/.test(keyword))return 'hats';
  if(/socken/.test(category)||/sock|chaussette|calzini/.test(keyword))return 'socks';
  if(/accessoires/.test(category)||/scarf|schal|tuch|glove|handschuh|belt|gürtel|bag|tasche|rucksack/.test(keyword))return 'other';
- if(/kleidung/.test(category)||/jacket|jacke|coat|mantel|mäntel|trouser|\bpants\b|hose|bodysuit|\bbody\b|bodies|dress|kleid|skirt|\brock\b|röcke|shirt|hemd|blouse|bluse|romper|strampler|pyjama|pajama|schlafanzug|tights|strumpfhose|legging|hoodie|pullover|sweater|jumper|cardigan|strickjacke|\bvest\b|weste|swimsuit|badeanzug|jeans|snowsuit|schneeanzug/.test(keyword))return 'clothing';
+ if(/kleidung/.test(category)||/jacket|jacke|coat|mantel|mäntel|trouser|\bpants\b|hose|bodysuit|\bbody\b|bodies|dress|kleid|skirt|\brock\b|röcke|shirt|hemd|blouse|bluse|romper|strampler|pyjama|pajama|schlafanzug|tights|strumpfhose|legging|hoodie|pullover|sweater|jumper|cardigan|strickjacke|\bvest\b|weste|swimsuit|badeanzug|jeans|snowsuit|schneeanzug|\bshorts\b|bikini|swimwear|bademode/.test(keyword))return 'clothing';
  return 'other';
 }
 export function resolveEntry(entry,preferences){
@@ -40,7 +40,8 @@ export function resolveEntry(entry,preferences){
  const categoryDepartments=[...new Set(categoryIds(entry).map(id=>filterOptions.categories.find(o=>o.id===id)?.departmentId).filter(Boolean))];
  const sizeDepartments=[...new Set((entry.sizeIds??[]).flatMap(id=>filterOptions.sizes.filter(o=>o.id===id&&(!sizeGroups(entry).length||sizeGroups(entry).includes(`${o.departmentId}:${o.group}`))).map(o=>o.departmentId)))];
  const departmentIds=entry.departmentIds?.length?[...entry.departmentIds]:categoryDepartments.length?categoryDepartments:sizeDepartments.length?sizeDepartments:preferences.departmentId?[preferences.departmentId]:[];
- const inheritSize=!entry.sizeIds?.length&&!entry.sizes?.length&&sizingType(entry)==='clothing'&&(!categoryIds(entry).length||categorySizes(entry,preferences).every(s=>s.group===clothingGroups[s.departmentId]))&&departmentIds.length===1&&departmentIds[0]===preferences.departmentId;
+ const choices=categorySizes({...entry,departmentIds},preferences);
+ const inheritSize=entry.useListSizes!==false&&!entry.sizeIds?.length&&!entry.sizes?.length&&sizingType(entry)==='clothing'&&choices.length>0&&choices.every(s=>s.group===clothingGroups[s.departmentId])&&departmentIds.length===1&&departmentIds[0]===preferences.departmentId;
  const sizeIds=entry.sizeIds?.length?[...entry.sizeIds]:inheritSize?[...preferences.sizeIds]:[];
  return {...entry,departmentIds,sizeIds,sizes:sizeIds.length?sizeIds.map(id=>filterOptions.sizes.find(o=>o.id===id)?.label).filter(Boolean):[...(entry.sizes??[])],conditionIds:entry.conditionIds?.length?[...entry.conditionIds]:[...preferences.conditionIds]};
 }
@@ -101,6 +102,8 @@ export function categorySizes(entry,preferences=defaultPreferences()){
  else if(/belt|gürtel/.test(keyword))type='belts';
  const matching=filterOptions.sizes.filter(s=>!departments.length||departments.includes(s.departmentId));
  if(group)return matching.filter(s=>s.group===group);
+ const mensGroup=/trouser|\bpants\b|\bhosen?\b|jeans|\bshorts\b/.test(keyword)?'Hosen für Herren':!/\bt[ -]?shirts?\b/.test(keyword)&&/\bshirts?\b|\bhemd(?:en)?\b/.test(keyword)?'Hemden für Herren':null;
+ if(mensGroup)return matching.filter(s=>s.group===(s.departmentId===5?mensGroup:clothingGroups[s.departmentId]));
  if(type==='other'&&entry.sizeIds?.length){const savedGroups=sizeGroups(entry);return filterOptions.sizes.filter(s=>savedGroups.length?savedGroups.includes(groupKey(s)):entry.sizeIds.includes(s.id));}
  return matching.filter(s=>type==='clothing'?s.group===clothingGroups[s.departmentId]:type==='shoes'?/schuh/i.test(s.group):type==='hats'?/mützen|hüte/i.test(s.group):type==='socks'?/^Socken für/.test(s.group):type==='belts'?/^Gürtel für/.test(s.group):false);
 }

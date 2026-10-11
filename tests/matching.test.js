@@ -59,3 +59,7 @@ test('matches explicitly displayed size alternatives and normalises range punctu
  assert.ok(matches(want('socks',{sizes:['39–42']}),item('1','a','socks',{size:'39-42'})));
  assert.equal(matches(want('scarf',{sizes:['M']}),item('1','a','scarf',{size:'L / 40 / 12'})),false);
 });
+
+test('common singular and plural German item names match English requests',()=>{
+ for(const [keyword,title] of [['Sneakers','Nike Sneaker'],['Tights','Strumpfhosen'],['Rings','Silberne Ringe'],['Bras','BHs Set']])assert.equal(matches({keyword},{title,price:5}),true,`${keyword}: ${title}`);
+});

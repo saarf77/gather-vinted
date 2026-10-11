@@ -21,7 +21,7 @@ test('translated filters retain Germany catalogue IDs and EU sizes',()=>{
  assert.match(optionLabel('category',filterOptions.categories.find(o=>o.id===13),'en'),/Jumpers/i);
 });
 test('common English keywords search in German and can match German titles',()=>{
- for(const [input,german,title] of [['jacket','jacke','Warme Jacke'],['bodysuit','body','Body Gr 86'],['trousers','hose','Hose 92'],['scarf','schal','Schal'],['Beanie','mütze','Mütze']]){
+ for(const [input,german,title] of [['jacket','jacke','Warme Jacke'],['bodysuit','body','Body Gr 86'],['trousers','hose','Hose 92'],['scarf','schal','Schal'],['Beanie','mütze','Mütze'],['Rings','ring','Silberne Ringe'],['Bras','bh','BHs Set'],['Shorts','Shorts','Kurze Hosen'],['Sneaker','sneakers','Nike Sneaker']]){
   assert.equal(searchTerm(input),german);assert.equal(matches({keyword:input},{title,price:5}),true);
  }
  assert.equal(searchTerm('Levis 501'),'Levis 501');assert.equal(searchTerm('Jacke'),'Jacke');

@@ -10,12 +10,12 @@ const KEY='gather.workspace.v1';
 const freshEntries=()=>structuredClone(initialEntries).map(e=>({...e,sizes:[],useListPreferences:true}));
 let entries=freshEntries(),listings=[],preferences=defaultPreferences(),source='live',filter='multi';
 let editId=null,searching=false,searchController=null,statusMessage=null,lastSearchPages=0,storageProblem=false;
-let selectedSizeIds=new Set(),selectedSizeGroups=[],legacySizes=[],selectedCategoryIds=new Set(),preferenceSizeIds=new Set();
+let useListSizes=true,selectedSizeIds=new Set(),selectedSizeGroups=[],legacySizes=[],selectedCategoryIds=new Set(),preferenceSizeIds=new Set();
 const conditionSets={'':[],6:[6],1:[6,1],2:[6,1,2],3:[6,1,2,3],4:[6,1,2,3,4]};
 try{
  const saved=JSON.parse(localStorage.getItem(KEY)??'null');
  if(saved){
-  if(!Array.isArray(saved.entries)||saved.entries.length>10||!saved.entries.every(e=>e&&typeof e.id==='string'&&typeof e.keyword==='string'&&e.keyword.trim()&&e.keyword.length<=80&&Array.isArray(e.sizes)&&e.sizes.every(s=>typeof s==='string')&&typeof e.brand==='string'&&typeof e.category==='string'&&(e.maxPrice===null||(Number.isFinite(e.maxPrice)&&e.maxPrice>=0&&e.maxPrice<=100000))&&(e.useListPreferences===undefined||typeof e.useListPreferences==='boolean'))||new Set(saved.entries.map(e=>e.id)).size!==saved.entries.length)throw new Error();
+  if(!Array.isArray(saved.entries)||saved.entries.length>10||!saved.entries.every(e=>e&&typeof e.id==='string'&&typeof e.keyword==='string'&&e.keyword.trim()&&e.keyword.length<=80&&Array.isArray(e.sizes)&&e.sizes.every(s=>typeof s==='string')&&typeof e.brand==='string'&&typeof e.category==='string'&&(e.maxPrice===null||(Number.isFinite(e.maxPrice)&&e.maxPrice>=0&&e.maxPrice<=100000))&&(e.useListPreferences===undefined||typeof e.useListPreferences==='boolean')&&(e.useListSizes===undefined||typeof e.useListSizes==='boolean'))||new Set(saved.entries.map(e=>e.id)).size!==saved.entries.length)throw new Error();
   entries=saved.entries.map(e=>({...e,category:'',departmentIds:e.departmentIds??[],sizeIds:e.sizeIds??[],conditionIds:e.conditionIds??[],categoryIds:categoryIds(e),categoryId:null,brandId:e.brandId??null}));
   entries.forEach(validateFilters);preferences=saved.preferences??defaultPreferences();validatePreferences(preferences);
   source=['import','empty','live'].includes(saved.source)?saved.source:'live';listings=source==='import'?validateListings(saved.listings):[];
@@ -84,7 +84,7 @@ function checkOptions(target,type,checked=[]){
  $(target).innerHTML=options.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${checked.includes(o.id)?'checked':''}>${escape(optionLabel(type,o))}</label>`).join('');
 }
 const checkedValues=selector=>[...document.querySelectorAll(`${selector} input:checked`)].map(n=>Number(n.value));
-function itemDraft(){return {id:editId??'draft',keyword:$('#keyword').value,sizes:legacySizes,sizeIds:[...selectedSizeIds],sizeGroups:selectedSizeIds.size?selectedSizeGroups:[],departmentIds:checkedValues('#department-options'),conditionIds:checkedValues('#condition-options'),categoryIds:[...selectedCategoryIds],useListPreferences:$('#use-preferences').checked};}
+function itemDraft(){return {id:editId??'draft',keyword:$('#keyword').value,sizes:legacySizes,sizeIds:[...selectedSizeIds],sizeGroups:selectedSizeIds.size?selectedSizeGroups:[],departmentIds:checkedValues('#department-options'),conditionIds:checkedValues('#condition-options'),categoryIds:[...selectedCategoryIds],useListPreferences:$('#use-preferences').checked,useListSizes};}
 const draftResolved=()=>resolveEntry(itemDraft(),preferences);
 const sizeChoices=()=>categorySizes(itemDraft(),preferences);
 function updateSizeSummary(){
@@ -96,12 +96,13 @@ function updateSizeSummary(){
  $('#size-picker').hidden=!choices.length;
 }
 function renderSizeChoices(){
- const choices=sizeChoices(),groups=[...new Set(choices.map(s=>`${s.departmentId}:${s.group}`))];
+ const choices=sizeChoices(),groups=[...new Set(choices.map(s=>`${s.departmentId}:${s.group}`))],current=draftResolved().sizeIds;
  $('#size-options').innerHTML=groups.map(group=>{
   const options=choices.filter(s=>`${s.departmentId}:${s.group}`===group),first=options[0];
-  return `<fieldset class="size-section"><legend>${escape(departmentName(first.departmentId))} · ${escape(optionLabel('group',first.group))}</legend><div class="size-options">${options.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${selectedSizeIds.has(o.id)?'checked':''}>${escape(sizeLabel(o))}</label>`).join('')}</div></fieldset>`;
+  return `<fieldset class="size-section"><legend>${escape(departmentName(first.departmentId))} · ${escape(optionLabel('group',first.group))}</legend><div class="size-options">${options.map(o=>`<label class="check-option"><input type="checkbox" value="${o.id}" ${current.includes(o.id)?'checked':''}>${escape(sizeLabel(o))}</label>`).join('')}</div></fieldset>`;
  }).join('');
- $('#clear-sizes').disabled=!selectedSizeIds.size&&!legacySizes.length;
+ $('#clear-sizes').disabled=!current.length&&!legacySizes.length;
+ $('#use-list-sizes').hidden=useListSizes||!resolveEntry({...itemDraft(),sizeIds:[],sizes:[],sizeGroups:[],useListSizes:true},preferences).sizeIds.length;
  updateSizeSummary();
 }
 function renderCategories(){
@@ -138,14 +139,15 @@ $('#category-search').addEventListener('input',renderCategories);
 $('#category-options').addEventListener('change',event=>{const id=Number(event.target.value);event.target.checked?selectedCategoryIds.add(id):selectedCategoryIds.delete(id);updateFilterMenus(true);});
 $('#clear-categories').addEventListener('click',()=>{selectedCategoryIds.clear();updateFilterMenus(true);});
 $('#size-options').addEventListener('change',event=>{
- $('#item-size-notice').hidden=true;legacySizes=[];const id=Number(event.target.value);event.target.checked?selectedSizeIds.add(id):selectedSizeIds.delete(id);
+ $('#item-size-notice').hidden=true;selectedSizeIds=new Set(draftResolved().sizeIds);useListSizes=false;legacySizes=[];const id=Number(event.target.value);event.target.checked?selectedSizeIds.add(id):selectedSizeIds.delete(id);
  selectedSizeGroups=[...new Set(sizeChoices().filter(s=>selectedSizeIds.has(s.id)).map(s=>`${s.departmentId}:${s.group}`))];
  renderSizeChoices();
 });
-$('#clear-sizes').addEventListener('click',()=>{selectedSizeIds.clear();selectedSizeGroups=[];legacySizes=[];updateFilterMenus();});
+$('#clear-sizes').addEventListener('click',()=>{useListSizes=false;selectedSizeIds.clear();selectedSizeGroups=[];legacySizes=[];updateFilterMenus();});
+$('#use-list-sizes').addEventListener('click',()=>{useListSizes=true;selectedSizeIds.clear();selectedSizeGroups=[];legacySizes=[];updateFilterMenus();});
 function openItem(id=null){
  if(searching)return;editId=id;$('#item-form').reset();$('#size-picker').open=false;$('#more-filters').open=false;$('#category-picker').open=false;$('#item-error').textContent='';$('#item-size-notice').hidden=true;$('#item-dialog-title').textContent=t(id?'editor.edit':'editor.add');
- const entry=entries.find(e=>e.id===id);selectedSizeIds=new Set(entry?.sizeIds??[]);selectedSizeGroups=entry?sizeGroups(entry):[];legacySizes=selectedSizeIds.size?[]:entry?.sizes??[];selectedCategoryIds=new Set(entry?categoryIds(entry):[]);
+ const entry=entries.find(e=>e.id===id);useListSizes=entry?.useListSizes!==false;selectedSizeIds=new Set(entry?.sizeIds??[]);selectedSizeGroups=entry?sizeGroups(entry):[];legacySizes=selectedSizeIds.size?[]:entry?.sizes??[];selectedCategoryIds=new Set(entry?categoryIds(entry):[]);
  if(entry){$('#keyword').value=entry.keyword;$('#max-price').value=entry.maxPrice??'';$('#brand').value=entry.brand;}
  $('#use-preferences').checked=entry?.useListPreferences!==false;
  checkOptions('#department-options','department',entry?.departmentIds);checkOptions('#condition-options','condition',entry?.conditionIds);

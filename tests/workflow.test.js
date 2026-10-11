@@ -118,3 +118,22 @@ test('mixed general and specialized clothing categories do not inherit clothing 
  assert.deepEqual(resolveEntry(item('Bra',{categoryIds:[119,532]}),{departmentId:1904,sizeIds:[3],conditionIds:[]}).sizeIds,[]);
  assert.deepEqual(resolveEntry(item('Trousers',{categoryIds:[34,84]}),{departmentId:5,sizeIds:[206],conditionIds:[]}).sizeIds,[]);
 });
+
+test('an item can choose any size while keeping list department and condition',()=>{
+ const resolved=resolveEntry(item('Jacke',{useListSizes:false}),preferences);
+ assert.deepEqual(resolved.sizeIds,[]);assert.deepEqual(resolved.departmentIds,[1193]);assert.deepEqual(resolved.conditionIds,[6,1,2]);
+});
+test('categories without size choices never inherit clothing size restrictions',()=>{
+ for(const id of [1258,3331])assert.deepEqual(resolveEntry(item('Bag',{categoryIds:[id]}),preferences).sizeIds,[]);
+});
+test('name-only men trousers and shirts use their own native sizing systems',async()=>{
+ const {categorySizes}=await import('../src/workflow.js');
+ const men={departmentId:5,sizeIds:[206],conditionIds:[2]};
+ for(const [keyword,group] of [['Trousers','Hosen für Herren'],['Jeans','Hosen für Herren'],['Shirt','Hemden für Herren'],['Hemd','Hemden für Herren']]){
+  const choices=categorySizes(item(keyword),men);assert.ok(choices.length);assert.ok(choices.every(s=>s.group===group));
+  assert.deepEqual(resolveEntry(item(keyword),men).sizeIds,[]);
+ }
+});
+test('common name-only children clothing requests keep clothing defaults',()=>{
+ for(const keyword of ['Shorts','Swimwear','Bikini','T-shirt'])assert.deepEqual(resolveEntry(item(keyword),preferences).sizeIds,[619,622],keyword);
+});
