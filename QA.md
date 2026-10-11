@@ -64,3 +64,9 @@ The supplied 9.85-second recording showed portrait listing images cropped into s
 - Automated tests cover visible metadata, safe item URLs, escaping untrusted listing text, missing metadata, duplicate catalogue title/brand fallback and accessible placeholder links.
 
 Validation: 79 Node tests, JavaScript syntax checks and production build. Desktop and mobile proof screenshots are in ignored `artifacts/`.
+
+## Follow-up: equal card heights
+
+The initial grid left each card at its natural height. A live desktop reproduction measured a 74.17 px difference between two cards in the first row. The grid now stretches cards to their row height, with a flexible product area keeping collapsed seller footers aligned. Photos retain their full-image aspect ratio and listing text is not clipped.
+
+Measured all multi-card rows after the fix: 69 rows at 1265 px desktop width, 103 rows at 1000 px tablet width and 102 rows at 390 px mobile width in German. Card-height differences and collapsed-footer bottom differences were 0 px. Details expansion/collapse remained usable and mobile had no horizontal overflow. Validation: 79 Node tests and production build.

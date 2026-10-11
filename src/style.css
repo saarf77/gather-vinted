@@ -26,15 +26,15 @@
 /* Photo-first results: every tile retains its seller and bundle context. */
 main.shopping-flow{max-width:1560px;padding-left:4%;padding-right:4%}
 .shopping-flow .workspace{grid-template-columns:290px minmax(0,1fr);gap:28px}
-#results{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;align-items:start}
+#results{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:20px;align-items:stretch}
 #results .empty{grid-column:1/-1}
-#results .seller-card{min-width:0;margin:0;border-radius:10px}
+#results .seller-card{min-width:0;margin:0;border-radius:10px;display:flex;flex-direction:column}
 #results .bundle-card{grid-column:auto}
 .results-panel{container-type:inline-size}
 @container(min-width:820px){#results:has(.single-match) .bundle-card{grid-column:span 2}}
 #results:has(.bundle-card):not(:has(.single-match)){grid-template-columns:repeat(auto-fill,minmax(340px,1fr))}
 #results:has(.bundle-card):not(:has(.single-match)) .bundle-card{grid-column:auto}
-#results .items-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px}
+#results .items-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding:12px;flex:1;align-content:start}
 #results .single-match .items-grid{grid-template-columns:minmax(0,1fr)}
 #results .product{min-width:0}
 #results .product-art{height:auto;aspect-ratio:3/4;background:#f4f3ef;overflow:hidden;border-radius:6px;position:relative}
