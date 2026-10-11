@@ -10,8 +10,8 @@ No Vinted account, API key, paid provider, proxy or browser extension is require
 
 1. Optionally set **List preferences** once: department, clothing sizes and minimum condition.
 2. Add items with name, searchable categories, matching sizes and maximum price. **More filters** contains brand, department and condition. Own filters override list defaults; disable **Use list preferences** for fully independent item filters. **Clear sizes** allows any size for that item while keeping its other preferences; **Use list sizes** restores the clothing defaults. Shoe, hat and sock sizes remain separate.
-3. Choose **Quick search** (1 page per item) or **Broader search** (up to 3), beside the shopping list. Results default to sellers matching two or more requests.
-4. Use **Search more** to expand towards 5 pages per item, within 30 pages total. It re-runs the broader range and replaces results. Cancellation or failure preserves prior successful results.
+3. Choose **Quick search** (1 page per item) or **Broader search** (up to 3 original pages plus up to 2 related first-page searches when capacity allows), beside the shopping list. The shopping list shows matching-listing counts per item; results default to sellers matching two or more items.
+4. Use **Search more** to expand towards 5 original pages per item while retaining related searches, within 30 pages total. It re-runs the broader range and replaces results. Cancellation or failure preserves prior successful results.
 5. Open item links from bundle cards to check availability and buy on Vinted. Cards lead with matched item names and item subtotal; fetched counts and missing items appear in details.
 
 Each listing can satisfy only one request. Sellers are ranked by items covered, then minimum item subtotal. Shipping, buyer protection and bundle discounts are confirmed on Vinted.
@@ -20,7 +20,7 @@ Each listing can satisfy only one request. Sellers are ranked by items covered, 
 
 Choose **Deutsch** or **English** in the header. The preference is saved in this browser and defaults to its language (German unless English is requested). Interface text is keyed in `src/messages.js`; catalogue label translations are keyed by the Germany IDs in `src/filter-translations.js`. Switching languages keeps the shopping list, native filters and results. Listing titles and user-entered keywords remain as written.
 
-Search always uses **Vinted Germany**, EUR and its size IDs. German keywords are recommended; common English item names such as `jacket`, `bodysuit`, `trousers`, `scarf` and `beanie` map to German names offline via `src/search-terms.js`. Other phrases pass through unchanged; there is no paid or general-purpose translation service.
+Search always uses **Vinted Germany**, EUR and its size IDs. German keywords are recommended; common English item names such as `jacket`, `bodysuit`, `trousers`, `scarf` and `beanie` map to German names offline via `src/search-terms.js`. Broader search adds curated alternatives such as Schlafanzug / Pyjama / Schlafanzüge, and Socken / Kindersocken / Stoppersocken when the native filters indicate Kids. The same size, category, brand, condition and price restrictions apply to every query. Other phrases pass through unchanged; there is no paid or general-purpose translation service.
 
 ## Filters
 

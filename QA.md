@@ -40,3 +40,15 @@ The reported two-item list used Kids size 98 pyjamas up to €10 and socks in EU
 - The empty 2+ view now explains the single-match count and that full wardrobes have not been checked.
 
 Validation for this follow-up: 67 Node tests, JavaScript syntax check and production build.
+
+## Follow-up: contextual query expansion
+
+Broader search preserves its original catalogue depth and adds up to two related first-page searches when the global 30-request budget permits. Quick search stays at one page per item. Search more retains the alternatives while increasing original depth to five pages. Native category, size, condition, brand and price filters are identical on every alternative; duplicates merge by listing ID.
+
+- Common simple EN/DE names use curated alternatives. Schlafanzug/Pyjamas searches Schlafanzug, Pyjama and Schlafanzüge. Socks/Socken with Kids context adds Kindersocken and Stoppersocken. Adult or ambiguous filters do not gain children-only terms. Qualified names such as “Paw Patrol Schlafanzug” and “red socks” remain unchanged.
+- Preserved-page comparison using captured real listings: size-98 boys' pyjamas up to €10 increased from 244 to 306 matching listings; socks EU 25–27/28–30 up to €15 increased from 234 to 395. These are observations from that snapshot, not stable counts or an exhaustive search.
+- Fresh browser Broader search: 762 unique listings across ten pages, 305 matching pyjama listings, 391 sock listings and one seller covering both at an €8 subtotal. The list now shows each item's matching-listing count, distinct from the number of sellers covering multiple items.
+- Search more fetched 1,067 listings across 14 pages: 448 pyjama matches, 508 sock matches and two complete bundles (€4 and €8). The action disappeared at the five-original-page depth limit.
+- German counts and mode descriptions and mobile wrapping at 390 × 844 were exercised in the browser. No paid service, embedding model or vector database was added. This remains curated query expansion rather than general semantic understanding.
+
+Validation: 74 Node tests, JavaScript syntax checks and production build. Tests cover original-page preservation, complete filters and evidence, alternative-query fallback, duplicate merging, cancellation and the maximum 30 total requests.

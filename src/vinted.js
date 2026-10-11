@@ -1,6 +1,6 @@
 import { appendFilters, filterKey, validateFilters } from './filters.js';
 const origin='https://www.vinted.de';
-import {germanSearchTerm} from './search-terms.js';
+import {germanSearchTerm,searchVariants} from './search-terms.js';
 export const searchTerm=germanSearchTerm;
 export function parseCatalogHtml(html){
  const parts=[];
@@ -52,17 +52,26 @@ export async function searchVinted(entries,{pages=3,onProgress=()=>{},signal,fet
  signal=signal?AbortSignal.any([signal,AbortSignal.timeout(280000)]):AbortSignal.timeout(280000);
  for(const entry of entries)if(!entry||typeof entry.id!=='string'||typeof entry.keyword!=='string'||!entry.keyword.trim()||entry.keyword.length>80||!(entry.maxPrice==null||(Number.isFinite(entry.maxPrice)&&entry.maxPrice>=0&&entry.maxPrice<=100000)))throw new Error('Invalid shopping-list entry.');
  for(const entry of entries)validateFilters(entry);
+ // Reserve the original pages first, then share remaining capacity fairly.
+ const extraLimit=pages===1?0:Math.min(2,Math.floor(30/entries.length)-pages);
+ const plans=entries.map(entry=>{
+  const variants=searchVariants(entry);
+  return {entry,queries:[{term:variants[0],pages},...variants.slice(1,1+extraLimit).map(term=>({term,pages:1}))]};
+ });
+ const total=plans.reduce((sum,plan)=>sum+plan.queries.reduce((count,q)=>count+q.pages,0),0);
  const merged=new Map();let completed=0;
- for(const entry of entries){
-  for(let page=1;page<=pages;page++){
-   signal?.throwIfAborted();
-   const url=new URL('/catalog',origin);url.searchParams.set('search_text',searchTerm(entry.keyword));url.searchParams.set('page',String(page));url.searchParams.set('order','relevance');
-   appendFilters(url,entry);
-   if(entry.maxPrice!=null){url.searchParams.set('price_to',String(entry.maxPrice));url.searchParams.set('currency','EUR');}
-   const products=fetchPage?parseCatalogHtml(await fetchPage(url.href)):await fetchPublicPage(url.href,signal);
-   for(const product of products){const existing=merged.get(product.id);if(existing){if(!existing.searchEntryIds.includes(entry.id))existing.searchEntryIds.push(entry.id);existing.filterEvidence[entry.id]=filterKey(entry);}else merged.set(product.id,{...product,searchEntryIds:[entry.id],filterEvidence:{[entry.id]:filterKey(entry)}});}
-   completed++;onProgress({type:'progress',keyword:entry.keyword,page,completed,total:pages*entries.length,listingCount:merged.size});
-   if(products.length<96)break;
+ for(const {entry,queries} of plans){
+  for(const query of queries){
+   for(let page=1;page<=query.pages;page++){
+    signal?.throwIfAborted();
+    const url=new URL('/catalog',origin);url.searchParams.set('search_text',query.term);url.searchParams.set('page',String(page));url.searchParams.set('order','relevance');
+    appendFilters(url,entry);
+    if(entry.maxPrice!=null){url.searchParams.set('price_to',String(entry.maxPrice));url.searchParams.set('currency','EUR');}
+    const products=fetchPage?parseCatalogHtml(await fetchPage(url.href)):await fetchPublicPage(url.href,signal);
+    for(const product of products){const existing=merged.get(product.id);if(existing){if(!existing.searchEntryIds.includes(entry.id))existing.searchEntryIds.push(entry.id);existing.filterEvidence[entry.id]=filterKey(entry);}else merged.set(product.id,{...product,searchEntryIds:[entry.id],filterEvidence:{[entry.id]:filterKey(entry)}});}
+    completed++;onProgress({type:'progress',keyword:entry.keyword,searchTerm:query.term,page,completed,total,listingCount:merged.size});
+    if(products.length<96)break;
+   }
   }
  }
  return {listings:[...merged.values()],searchedAt:new Date().toISOString(),pagesFetched:completed};
